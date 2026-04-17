@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Same as DATABASE_URL on local Postgres. On Neon: pooled URL in DATABASE_URL, unpooled (non-pooler host) here for migrations.
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
+}
+
+enum OrderStatus {
+  CREATED
+  CONFIRMED
+  COMPLETED
+}
+
+enum VariantUnit {
+  PIECE
+  METER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(CUSTOMER)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  orders Order[]
+
+  @@map("users")
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now()) @map("created_at")
+  products  Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          String           @id @default(cuid())
+  name        String
+  categoryId  String           @map("category_id")
+  category    Category         @relation(fields: [categoryId], references: [id])
+  hasVariants Boolean          @default(false) @map("has_variants")
+  isActive    Boolean          @default(true) @map("is_active")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  variants   ProductVariant[]
+  orderItems OrderItem[]
+
+  @@index([categoryId])
+  @@index([isActive])
+  @@map("products")
+}
+
+model ProductVariant {
+  id        String      @id @default(cuid())
+  productId String      @map("product_id")
+  product   Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size      String
+  price     Decimal     @db.Decimal(12, 2)
+  stock     Int         @default(0)
+  unit      VariantUnit
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  orderItems OrderItem[]
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String?     @map("user_id")
+  user        User?       @relation(fields: [userId], references: [id])
+  status      OrderStatus @default(CREATED)
+  totalAmount Decimal     @map("total_amount") @db.Decimal(12, 2)
+  customerName         String   @map("customer_name")
+  customerBusinessName String   @map("customer_business_name")
+  customerEmail        String   @map("customer_email")
+  customerPhone        String   @map("customer_phone")
+  customerCity         String   @map("customer_city")
+  customerNotes        String?  @map("customer_notes")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  items OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String          @id @default(cuid())
+  orderId      String          @map("order_id")
+  order        Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String          @map("product_id")
+  product      Product         @relation(fields: [productId], references: [id])
+  variantId    String          @map("variant_id")
+  variant      ProductVariant  @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  productName  String          @map("product_name")
+  sizeSnapshot String?         @map("size_snapshot")
+  price        Decimal         @db.Decimal(12, 2)
+  quantity     Int
+  total        Decimal         @db.Decimal(12, 2)
+
+  @@index([orderId])
+  @@index([variantId])
+  @@map("order_items")
+}
