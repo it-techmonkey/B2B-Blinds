@@ -23,6 +23,7 @@ const ROLE_META: Record<
       { href: "/profile", label: "Profile" },
       { href: "/orders", label: "Orders", match: "prefix" },
       { href: "/", label: "Catalog" },
+      { href: "/cart", label: "Cart" },
       { href: "/orders/checkout", label: "Checkout" },
     ],
   },

@@ -60,8 +60,9 @@ export function CatalogCart({ isCustomer = false }: { isCustomer?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [activeVariants, setActiveVariants] = useState<Record<string, string[]>>({});
-  const [pickerVariant, setPickerVariant] = useState<Record<string, string>>({});
+  const [selectedVariantByProduct, setSelectedVariantByProduct] = useState<Record<string, string>>({});
+  const [draftQtyByVariant, setDraftQtyByVariant] = useState<Record<string, number>>({});
+  const [cartOpen, setCartOpen] = useState(false);
   const loadedRef = useRef(false);
   const userTouched = useRef(false);
 
@@ -72,14 +73,17 @@ export function CatalogCart({ isCustomer = false }: { isCustomer?: boolean }) {
         const res = await apiJson<{ data: ProductRow[] }>("/api/products?page=1&limit=200");
         if (cancelled) return;
         setProducts(res.data);
-        const initialActive: Record<string, string[]> = {};
-        const initialPicker: Record<string, string> = {};
+        const initialSelectedVariant: Record<string, string> = {};
+        const initialDraftQty: Record<string, number> = {};
         for (const p of res.data) {
-          initialActive[p.id] = [];
-          initialPicker[p.id] = "";
+          const firstVariant = p.variants[0];
+          if (firstVariant) {
+            initialSelectedVariant[p.id] = firstVariant.id;
+            initialDraftQty[firstVariant.id] = 1;
+          }
         }
-        setActiveVariants(initialActive);
-        setPickerVariant(initialPicker);
+        setSelectedVariantByProduct(initialSelectedVariant);
+        setDraftQtyByVariant(initialDraftQty);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load products");
       } finally {
@@ -104,28 +108,16 @@ export function CatalogCart({ isCustomer = false }: { isCustomer?: boolean }) {
     if (saved?.items?.length) {
       const variantStockById = new Map(products.flatMap((p) => p.variants.map((v) => [v.id, v.stock] as const)));
       const q: Record<string, number> = {};
-      const savedByProduct: Record<string, Set<string>> = {};
       for (const line of saved.items) {
         const maxStock = variantStockById.get(line.variantId);
         if (typeof maxStock !== "number" || line.quantity <= 0) continue;
         q[line.variantId] = Math.max(0, Math.min(maxStock, line.quantity));
-        if (!savedByProduct[line.productId]) savedByProduct[line.productId] = new Set();
-        savedByProduct[line.productId].add(line.variantId);
       }
       setQuantities((prev) => ({ ...prev, ...q }));
-      setActiveVariants((prev) => {
+      setDraftQtyByVariant((prev) => {
         const next = { ...prev };
-        for (const p of products) {
-          const base = new Set(next[p.id] ?? []);
-          const hits = savedByProduct[p.id];
-          if (hits) {
-            for (const variantId of hits) {
-              if (p.variants.some((v) => v.id === variantId)) {
-                base.add(variantId);
-              }
-            }
-          }
-          next[p.id] = Array.from(base);
+        for (const [variantId, qty] of Object.entries(q)) {
+          next[variantId] = Math.max(1, qty);
         }
         return next;
       });
@@ -142,24 +134,21 @@ export function CatalogCart({ isCustomer = false }: { isCustomer?: boolean }) {
     setQuantities((q) => ({ ...q, [variantId]: value }));
   }
 
-  function addVariantLine(product: ProductRow) {
-    const picked = pickerVariant[product.id];
+  function addOrUpdateLine(product: ProductRow) {
+    const picked = selectedVariantByProduct[product.id];
     if (!picked) return;
+    const variant = product.variants.find((v) => v.id === picked);
+    if (!variant) return;
+    const maxStock = variant.stock ?? 0;
+    if (maxStock <= 0) return;
+    const nextQty = Math.max(1, Math.min(maxStock, Math.floor(draftQtyByVariant[picked] ?? 1)));
     userTouched.current = true;
-    setActiveVariants((prev) => {
-      const current = prev[product.id] ?? [];
-      if (current.includes(picked)) return prev;
-      return { ...prev, [product.id]: [...current, picked] };
-    });
+    setQty(picked, nextQty);
   }
 
-  function removeVariantLine(productId: string, variantId: string) {
+  function removeVariantLine(variantId: string) {
     userTouched.current = true;
     setQuantities((prev) => ({ ...prev, [variantId]: 0 }));
-    setActiveVariants((prev) => {
-      const current = prev[productId] ?? [];
-      return { ...prev, [productId]: current.filter((id) => id !== variantId) };
-    });
   }
 
   const lineCount = useMemo(() => {
@@ -195,11 +184,13 @@ export function CatalogCart({ isCustomer = false }: { isCustomer?: boolean }) {
     return Array.from(grouped.entries());
   }, [products]);
 
-  function goCheckout() {
+  const selectedLines = useMemo(() => buildLinesFromState(products, quantities), [products, quantities]);
+
+  function goCart() {
     const items = buildLinesFromState(products, quantities);
     if (items.length === 0) return;
     writeCartPayload({ items });
-    router.push("/orders/checkout");
+    router.push("/cart");
   }
 
   if (loading) {
@@ -212,138 +203,104 @@ export function CatalogCart({ isCustomer = false }: { isCustomer?: boolean }) {
 
   return (
     <div className="space-y-4 pb-24">
-      <div className="card-dashboard flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-        <div>
-          <p className="section-kicker">Cart</p>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <span className="rounded-full border border-border/80 bg-muted/65 px-3 py-1 font-medium text-foreground">
-              {lineCount} line{lineCount === 1 ? "" : "s"}
-            </span>
-            <span className="rounded-full border border-border/80 bg-muted/65 px-3 py-1 font-medium text-foreground">
-              {totalUnits} unit{totalUnits === 1 ? "" : "s"}
-            </span>
-          </div>
-        </div>
-        <button type="button" disabled={lineCount === 0} onClick={goCheckout} className="btn-primary w-full sm:w-auto">
-          Continue to checkout
-        </button>
-      </div>
-
-      <div className="space-y-5">
+      <div className="space-y-6">
         {productsByCategory.map(([categoryName, categoryProducts]) => (
-          <section key={categoryName} className="space-y-2">
-            <h2 className="text-sm font-semibold text-foreground">{categoryName}</h2>
-            <div className="card-dashboard divide-y divide-border/70">
+          <section key={categoryName} className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold tracking-[-0.01em] text-foreground">{categoryName}</h2>
+              <span className="text-xs text-muted-foreground">{categoryProducts.length} products</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {categoryProducts.map((p) => {
-                const shownVariantIds = activeVariants[p.id] ?? [];
-                const shownVariants = shownVariantIds
-                  .map((id) => p.variants.find((v) => v.id === id))
-                  .filter((v): v is Variant => Boolean(v));
-                const hiddenOptions = p.variants.filter((v) => !shownVariantIds.includes(v.id));
-                const hasAnyLine = shownVariants.length > 0;
+                const selectedVariantId = selectedVariantByProduct[p.id] ?? p.variants[0]?.id ?? "";
+                const selectedVariant = p.variants.find((v) => v.id === selectedVariantId) ?? p.variants[0];
+                const maxStock = selectedVariant?.stock ?? 0;
+                const currentQty = selectedVariant ? quantities[selectedVariant.id] ?? 0 : 0;
+                const draftQty = selectedVariant ? draftQtyByVariant[selectedVariant.id] ?? 1 : 1;
+                const inCart = currentQty > 0;
 
                 return (
-                  <article key={p.id} className="space-y-4 p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
+                  <article key={p.id} className="card-dashboard flex h-full flex-col gap-4 p-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
-                        <p className="text-base font-semibold tracking-[-0.01em] text-foreground">{p.name}</p>
+                        <p className="text-base font-semibold leading-5 tracking-[-0.01em] text-foreground">{p.name}</p>
                         <p className="text-xs text-muted-foreground">
                           {p.variants.length} variant{p.variants.length === 1 ? "" : "s"} available
                         </p>
                       </div>
-                      <span className="rounded-full border border-border/80 bg-muted/55 px-2.5 py-1 text-xs font-medium text-foreground">
-                        {shownVariants.length} selected
+                      <span
+                        className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                          inCart
+                            ? "border-primary/25 bg-primary/10 text-primary"
+                            : "border-border/80 bg-muted/55 text-muted-foreground"
+                        }`}
+                      >
+                        {inCart ? `In cart: ${currentQty}` : "Not added"}
                       </span>
                     </div>
 
-                    {p.hasVariants ? (
-                      <div className="rounded-[14px] border border-border/80 bg-muted/30 p-3">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <select
-                          className="input-field-sm h-9 flex-1"
-                          value={pickerVariant[p.id] ?? ""}
-                          onChange={(e) => setPickerVariant((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                          disabled={hiddenOptions.length === 0}
-                          aria-label={`Select variant for ${p.name}`}
-                        >
-                          <option value="">{hiddenOptions.length === 0 ? "All variants already added" : "Choose a variant to add"}</option>
-                          {hiddenOptions.map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {compactVariantLabel(v)}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          className="btn-secondary h-9 px-3 text-xs"
-                          onClick={() => addVariantLine(p)}
-                          disabled={hiddenOptions.length === 0 || !pickerVariant[p.id]}
-                        >
-                          Add variant
-                        </button>
-                        </div>
+                    <div className="rounded-[14px] border border-border/75 bg-muted/25 p-3">
+                      <label className="field-label text-xs" htmlFor={`variant-${p.id}`}>
+                        Select variant
+                      </label>
+                      <select
+                        id={`variant-${p.id}`}
+                        className="input-field-sm mt-1.5 h-10"
+                        value={selectedVariantId}
+                        onChange={(e) =>
+                          setSelectedVariantByProduct((prev) => ({
+                            ...prev,
+                            [p.id]: e.target.value,
+                          }))
+                        }
+                        aria-label={`Select variant for ${p.name}`}
+                      >
+                        {p.variants.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {compactVariantLabel(v)}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Stock: {maxStock}</span>
+                        <span>
+                          {selectedVariant ? `$${selectedVariant.price} / ${selectedVariant.unit.toLowerCase()}` : "Unavailable"}
+                        </span>
                       </div>
-                    ) : null}
+                    </div>
 
-                    {hasAnyLine ? (
-                      <div className="table-shell overflow-x-auto">
-                        <table className="w-full min-w-[620px] text-sm">
-                          <thead>
-                            <tr className="table-head">
-                              <th className="px-3 py-2.5 font-medium">Variant</th>
-                              <th className="px-3 py-2.5 text-right font-medium">Price</th>
-                              <th className="px-3 py-2.5 text-right font-medium">Stock</th>
-                              <th className="px-3 py-2.5 text-right font-medium">Qty</th>
-                              <th className="px-3 py-2.5 text-right font-medium">Line total</th>
-                              {p.hasVariants ? <th className="px-3 py-2.5 text-right font-medium">Action</th> : null}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {shownVariants.map((v) => {
-                              const maxStock = v.stock ?? 0;
-                              const rowTotal = Number(v.price) * (quantities[v.id] ?? 0);
-                              return (
-                                <tr key={v.id} className="table-row">
-                                  <td className="px-3 py-2.5 text-foreground">{compactVariantLabel(v)}</td>
-                                  <td className="px-3 py-2.5 text-right tabular-nums">${v.price}</td>
-                                  <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{maxStock}</td>
-                                  <td className="px-3 py-2.5 text-right">
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      max={maxStock}
-                                      className="qty-input h-9 w-[4.8rem]"
-                                      value={quantities[v.id] ?? 0}
-                                      onChange={(e) =>
-                                        setQty(v.id, Math.max(0, Math.min(maxStock, Number(e.target.value) || 0)))
-                                      }
-                                      disabled={maxStock <= 0}
-                                      aria-label={`Qty ${p.name} ${v.size}`}
-                                    />
-                                  </td>
-                                  <td className="px-3 py-2.5 text-right font-medium tabular-nums">${rowTotal.toFixed(2)}</td>
-                                  {p.hasVariants ? (
-                                    <td className="px-3 py-2.5 text-right">
-                                      <button
-                                        type="button"
-                                        className="text-xs font-medium text-muted-foreground hover:text-foreground"
-                                        onClick={() => removeVariantLine(p.id, v.id)}
-                                      >
-                                        Remove
-                                      </button>
-                                    </td>
-                                  ) : null}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                    <div className="mt-auto flex items-end gap-2">
+                      <div className="w-24">
+                        <label className="field-label text-xs" htmlFor={`qty-${p.id}`}>
+                          Qty
+                        </label>
+                        <input
+                          id={`qty-${p.id}`}
+                          type="number"
+                          min={1}
+                          max={maxStock}
+                          className="input-field-sm mt-1.5 h-10 w-full text-right"
+                          value={draftQty}
+                          onChange={(e) => {
+                            if (!selectedVariant) return;
+                            setDraftQtyByVariant((prev) => ({
+                              ...prev,
+                              [selectedVariant.id]: Math.max(1, Number(e.target.value) || 1),
+                            }));
+                          }}
+                          disabled={maxStock <= 0 || !selectedVariant}
+                          aria-label={`Qty for ${p.name}`}
+                        />
                       </div>
-                    ) : (
-                      <div className="rounded-[14px] border border-dashed border-border/80 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
-                        No variant selected yet. Choose a size from the dropdown and click &quot;Add variant&quot; to start.
-                      </div>
-                    )}
+                      <button
+                        type="button"
+                        className="btn-primary h-10 flex-1"
+                        onClick={() => addOrUpdateLine(p)}
+                        disabled={!selectedVariant || maxStock <= 0}
+                      >
+                        {inCart ? "Update cart" : "Add to cart"}
+                      </button>
+                    </div>
                   </article>
                 );
               })}
@@ -351,6 +308,55 @@ export function CatalogCart({ isCustomer = false }: { isCustomer?: boolean }) {
           </section>
         ))}
       </div>
+
+      {cartOpen ? (
+        <section className="card-dashboard p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">Cart items</h2>
+            <button
+              type="button"
+              className="text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => setCartOpen(false)}
+            >
+              Hide
+            </button>
+          </div>
+          {selectedLines.length === 0 ? (
+            <p className="rounded-[12px] border border-dashed border-border/85 bg-muted/25 px-3 py-3 text-sm text-muted-foreground">
+              Your cart is empty.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {selectedLines.map((line) => (
+                <article
+                  key={`${line.productId}-${line.variantId}`}
+                  className="flex flex-col gap-2 rounded-[12px] border border-border/80 bg-muted/25 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{line.productName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {line.size} · ${line.price} each
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium tabular-nums text-foreground">Qty {line.quantity}</span>
+                    <span className="text-sm font-semibold tabular-nums text-foreground">
+                      ${(Number(line.price) * line.quantity).toFixed(2)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeVariantLine(line.variantId)}
+                      className="text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <div className={`fixed bottom-4 right-4 left-4 z-30 ${isCustomer ? "md:left-[calc(15rem+1.5rem)]" : "md:left-6"}`}>
         <div className="rounded-[16px] border border-border bg-white/95 px-4 py-3 shadow-[0_22px_40px_-28px_rgba(15,24,38,0.38)] backdrop-blur">
@@ -366,14 +372,37 @@ export function CatalogCart({ isCustomer = false }: { isCustomer?: boolean }) {
                 ${estimatedTotal.toFixed(2)} estimated total
               </span>
             </div>
-            <button
-              type="button"
-              disabled={lineCount === 0}
-              onClick={goCheckout}
-              className="btn-primary h-10 w-full sm:w-auto"
-            >
-              Continue to checkout
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCartOpen((prev) => !prev)}
+                className="inline-flex h-10 items-center gap-2 rounded-[12px] border border-border/85 bg-muted/45 px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/70"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4 text-muted-foreground"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="9" cy="20" r="1" />
+                  <circle cx="17" cy="20" r="1" />
+                  <path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 7H7.2" />
+                </svg>
+                <span className="tabular-nums">
+                  {selectedLines.length} item{selectedLines.length === 1 ? "" : "s"}
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={lineCount === 0}
+                onClick={goCart}
+                className="btn-primary h-10 w-full sm:w-auto"
+              >
+                Go to cart
+              </button>
+            </div>
           </div>
         </div>
       </div>
