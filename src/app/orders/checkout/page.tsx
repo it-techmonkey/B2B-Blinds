@@ -1,20 +1,23 @@
 import { CheckoutClient } from "@/components/CheckoutClient";
-import { DashboardShell } from "@/components/DashboardShell";
-import { GuestShell } from "@/components/GuestShell";
 import { getSession } from "@/lib/auth/get-session";
+import { DashboardShell } from "@/components/DashboardShell";
+import { PageHeader } from "@/components/PageHeader";
+import { redirect } from "next/navigation";
 
 export default async function CheckoutPage() {
   const session = await getSession();
-  const inner = (
-    <>
-      <section className="card-dashboard mb-6 p-5 sm:p-6">
-        <h1 className="dash-title mt-3">Checkout</h1>
-      </section>
-      <CheckoutClient />
-    </>
-  );
-  if (session?.role === "CUSTOMER") {
-    return <DashboardShell role="CUSTOMER">{inner}</DashboardShell>;
+  if (!session || session.role !== "CUSTOMER") {
+    redirect("/login?next=/orders/checkout");
   }
-  return <GuestShell>{inner}</GuestShell>;
+  const inner = (
+    <div className="content-stack">
+      <PageHeader
+        kicker="Order workflow"
+        title="Checkout"
+        subtitle="Review cart lines, confirm business details, and place your order."
+      />
+      <CheckoutClient isCustomer />
+    </div>
+  );
+  return <DashboardShell role="CUSTOMER">{inner}</DashboardShell>;
 }

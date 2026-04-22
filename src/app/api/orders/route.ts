@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { createOrderSchema, paginationSchema } from "@/server/validation/schemas";
 import { createOrder, listAllOrders } from "@/server/services/order.service";
-import { requireAdmin, requireAuth } from "@/lib/auth/api";
+import { requireAdmin, requireCustomer } from "@/lib/auth/api";
 import { jsonError, jsonOk } from "@/lib/http";
 import { connectionErrorResponse } from "@/lib/prisma-errors";
 import { serializeOrder } from "@/server/serialize";
@@ -39,19 +39,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    let userId: string | undefined;
-    try {
-      const session = await requireAuth(request);
-      if (session.role === "CUSTOMER") {
-        userId = session.sub;
-      }
-    } catch {
-      userId = undefined;
-    }
+    const session = await requireCustomer(request);
     const body = await request.json();
     const { items, customer } = createOrderSchema.parse(body);
-    const order = await createOrder(items, customer, userId);
-    const invoiceAccessToken = userId ? undefined : await signInvoiceAccessToken(order.id);
+    const order = await createOrder(items, customer, session.sub);
+    const invoiceAccessToken = await signInvoiceAccessToken(order.id);
     return jsonOk({ order: serializeOrder(order), invoiceAccessToken }, 201);
   } catch (e) {
     if (e instanceof ZodError) {

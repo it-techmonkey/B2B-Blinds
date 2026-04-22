@@ -15,7 +15,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function CheckoutClient() {
+export function CheckoutClient({ isCustomer }: { isCustomer: boolean }) {
   const router = useRouter();
   const [lines, setLines] = useState<CartLineMeta[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +123,16 @@ export function CheckoutClient() {
           <InvoicePdfLink orderId={placedOrderId} accessToken={invoiceAccessToken ?? undefined} variant="button">
             Download invoice PDF
           </InvoicePdfLink>
+          {isCustomer ? (
+            <button type="button" onClick={() => router.push(`/orders/${placedOrderId}?placed=1`)} className="btn-secondary">
+              View order
+            </button>
+          ) : null}
+          {isCustomer ? (
+            <button type="button" onClick={() => router.push("/profile")} className="btn-secondary">
+              Open profile
+            </button>
+          ) : null}
           <button type="button" onClick={() => router.push("/")} className="btn-primary">
             Continue shopping
           </button>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/DashboardShell";
 import { DeleteProductButton } from "@/components/DeleteProductButton";
+import { PageHeader } from "@/components/PageHeader";
 import { getSession } from "@/lib/auth/get-session";
 import { listProductsAdmin } from "@/server/services/product.service";
 import { redirect } from "next/navigation";
@@ -25,36 +26,35 @@ export default async function AdminProductsPage({
 
   return (
     <DashboardShell role="ADMIN">
-      <section className="card-dashboard mb-6 p-5 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="dash-title mt-3">Products</h1>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link href="/admin/products/new" className="btn-primary w-full shrink-0 sm:w-auto">
+      <div className="content-stack">
+        <PageHeader
+          kicker="Admin operations"
+          title="Products"
+          subtitle="Maintain catalog availability, variant pricing, and stock levels."
+          actions={
+            <Link href="/admin/products/new" className="btn-primary w-full shrink-0 lg:w-auto">
               Add product
             </Link>
+          }
+        />
+
+        <section className="grid gap-3 xl:grid-cols-3">
+          <div className="stat-card">
+            <p className="stat-label">Products on page</p>
+            <p className="stat-value">{data.length}</p>
           </div>
-        </div>
-      </section>
+          <div className="stat-card">
+            <p className="stat-label">Active / total variants</p>
+            <p className="stat-value">{activeCount} / {variantCount}</p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label">Total stock units</p>
+            <p className="stat-value">{stockCount}</p>
+          </div>
+        </section>
 
-      <section className="mb-6 grid gap-3 xl:grid-cols-3">
-        <div className="stat-card">
-          <p className="stat-label">Products on page</p>
-          <p className="stat-value">{data.length}</p>
-        </div>
-        <div className="stat-card">
-          <p className="stat-label">Active / total variants</p>
-          <p className="stat-value">{activeCount} / {variantCount}</p>
-        </div>
-        <div className="stat-card">
-          <p className="stat-label">Total stock units</p>
-          <p className="stat-value">{stockCount}</p>
-        </div>
-      </section>
-
-      <div className="table-shell overflow-x-auto">
-        <table className="w-full min-w-[860px] text-sm">
+        <div className="table-shell overflow-x-auto">
+          <table className="w-full min-w-[860px] text-sm">
           <thead>
             <tr className="table-head">
               <th className="px-4 py-3 font-medium">Name</th>
@@ -91,26 +91,27 @@ export default async function AdminProductsPage({
               </tr>
             ))}
           </tbody>
-        </table>
-      </div>
+          </table>
+        </div>
 
-      {pagination.totalPages > 1 ? (
-        <nav className="mt-4 flex items-center justify-center gap-2" aria-label="Pagination">
-          {page > 1 ? (
-            <Link href={`/admin/products?page=${page - 1}`} className="btn-secondary h-9 px-3 text-xs">
-              Previous
-            </Link>
-          ) : null}
-          <span className="px-3 text-xs text-muted-foreground">
-            {page} / {pagination.totalPages}
-          </span>
-          {page < pagination.totalPages ? (
-            <Link href={`/admin/products?page=${page + 1}`} className="btn-secondary h-9 px-3 text-xs">
-              Next
-            </Link>
-          ) : null}
-        </nav>
-      ) : null}
+        {pagination.totalPages > 1 ? (
+          <nav className="flex items-center justify-center gap-2" aria-label="Pagination">
+            {page > 1 ? (
+              <Link href={`/admin/products?page=${page - 1}`} className="btn-secondary h-9 px-3 text-xs">
+                Previous
+              </Link>
+            ) : null}
+            <span className="px-3 text-xs text-muted-foreground">
+              {page} / {pagination.totalPages}
+            </span>
+            {page < pagination.totalPages ? (
+              <Link href={`/admin/products?page=${page + 1}`} className="btn-secondary h-9 px-3 text-xs">
+                Next
+              </Link>
+            ) : null}
+          </nav>
+        ) : null}
+      </div>
     </DashboardShell>
   );
 }

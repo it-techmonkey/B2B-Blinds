@@ -264,41 +264,56 @@ async function seedFromProductsXlsx(filePath: string) {
 }
 
 async function main() {
-  const adminEmail = (process.env.ADMIN_EMAIL ?? "admin@example.com").trim().toLowerCase();
+  const adminName = (process.env.ADMIN_NAME ?? "Olivia Carter").trim();
+  const adminEmail = (process.env.ADMIN_EMAIL ?? "admin@blinds.com").trim().toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD ?? "BlindsAdmin#2026!";
+  const customerName = (process.env.CUSTOMER_NAME ?? "Ethan Brooks").trim();
+  const customerEmail = (process.env.CUSTOMER_EMAIL ?? "user@blinds.com").trim().toLowerCase();
+  const customerPassword = process.env.CUSTOMER_PASSWORD ?? "BlindsUser#2026!";
+
+  if (customerEmail === adminEmail) {
+    throw new Error("CUSTOMER_EMAIL cannot be the same as ADMIN_EMAIL");
+  }
 
   const rawUrl = process.env.DATABASE_URL ?? "";
   const masked = rawUrl.replace(/:([^:@/]{1,})@/, ":****@");
   console.log(`Seed using DATABASE_URL host: ${masked ? masked.split("@").pop()?.slice(0, 80) : "(missing)"}`);
 
-  const existing = await prisma.user.findFirst({
-    where: { email: { equals: adminEmail, mode: "insensitive" } },
-  });
   const passwordHash = await bcrypt.hash(adminPassword, 12);
+  const customerPasswordHash = await bcrypt.hash(customerPassword, 12);
 
-  if (!existing) {
-    await prisma.user.create({
+  // Reset all existing users and create exactly one admin + one customer.
+  await prisma.$transaction(async (tx) => {
+    await tx.order.updateMany({
+      where: { userId: { not: null } },
+      data: { userId: null },
+    });
+    await tx.user.deleteMany();
+
+    await tx.user.create({
       data: {
-        name: "Admin",
+        name: adminName,
         email: adminEmail,
         passwordHash,
         role: UserRole.ADMIN,
       },
     });
-    console.log(`Created admin user: ${adminEmail}`);
-  } else if (existing.role === UserRole.ADMIN) {
-    await prisma.user.update({
-      where: { id: existing.id },
-      data: { email: adminEmail, passwordHash },
-    });
-    console.log(`Synced admin password for: ${adminEmail} (role ADMIN; uses ADMIN_PASSWORD or seed default)`);
-  } else {
-    console.warn(
-      `Cannot seed admin: ${existing.email} exists as ${existing.role}. Use another ADMIN_EMAIL or remove that user.`
-    );
-  }
 
-  console.log(`Sign in with email: ${adminEmail} and the password from ADMIN_PASSWORD (default: BlindsAdmin#2026!)`);
+    await tx.user.create({
+      data: {
+        name: customerName,
+        email: customerEmail,
+        passwordHash: customerPasswordHash,
+        role: UserRole.CUSTOMER,
+      },
+    });
+  });
+
+  console.log(`Created admin user: ${adminName} <${adminEmail}>`);
+  console.log(`Created customer user: ${customerName} <${customerEmail}>`);
+  console.log("Sign in credentials:");
+  console.log(`- Admin: ${adminEmail} / ${adminPassword}`);
+  console.log(`- Customer: ${customerEmail} / ${customerPassword}`);
 
   const categories = ["Blinds", "Shades", "Accessories"];
   for (const name of categories) {

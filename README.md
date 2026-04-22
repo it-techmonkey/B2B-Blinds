@@ -49,7 +49,8 @@ Stock lives on **`product_variants`**. Each order line references a variant; sto
 
    - `DATABASE_URL` — PostgreSQL connection string  
    - `JWT_SECRET` — at least 32 random characters  
-   - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — used only by the seed to create the single admin user  
+  - `ADMIN_NAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` — used by seed to recreate the single admin user  
+  - `CUSTOMER_NAME` / `CUSTOMER_EMAIL` / `CUSTOMER_PASSWORD` — used by seed to recreate one test customer user  
 
 3. **Database**
 
@@ -76,7 +77,8 @@ Stock lives on **`product_variants`**. Each order line references a variant; sto
    Open [http://localhost:3000](http://localhost:3000).
 
 - **Admin:** sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`.  
-- **Customers:** register at `/register` (the admin email cannot be used for registration).
+- **Customer (seeded test user):** sign in with `CUSTOMER_EMAIL` / `CUSTOMER_PASSWORD` from `.env`.
+- You can still register additional customers at `/register` (the admin email cannot be used for registration).
 
 ## REST API (summary)
 

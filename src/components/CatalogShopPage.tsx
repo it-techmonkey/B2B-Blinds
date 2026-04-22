@@ -1,6 +1,7 @@
 import { CatalogCart } from "@/components/CatalogCart";
 import { DashboardShell } from "@/components/DashboardShell";
 import { GuestShell } from "@/components/GuestShell";
+import { PageHeader } from "@/components/PageHeader";
 import { getSession } from "@/lib/auth/get-session";
 
 export async function CatalogShopPage() {
@@ -9,10 +10,12 @@ export async function CatalogShopPage() {
 
   const inner = (
     <>
-      <section className="card-dashboard mb-6 p-5 sm:p-6">
-        <h1 className="dash-title">Catalog</h1>
-      </section>
-      <CatalogCart />
+      <PageHeader
+        kicker="Product catalog"
+        title="Catalog"
+        subtitle="Browse variants, build your cart, and move to checkout when quantities are ready."
+      />
+      <CatalogCart isCustomer={isCustomer} />
     </>
   );
 

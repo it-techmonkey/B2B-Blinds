@@ -13,6 +13,7 @@ function getSecret(): Uint8Array | null {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(COOKIE_NAME)?.value;
+  const isAuthPage = pathname === "/login" || pathname === "/register";
 
   let role: string | null = null;
   const secretKey = getSecret();
@@ -24,62 +25,41 @@ export async function middleware(request: NextRequest) {
       role = null;
     }
   }
+  const isAuthenticated = Boolean(token && role);
+
+  // Keep auth pages public so users can sign in.
+  if (isAuthPage) {
+    if (role === "ADMIN") {
+      return NextResponse.redirect(new URL("/admin/orders", request.url));
+    }
+    if (role === "CUSTOMER") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Everything except login/register is private.
+  if (!isAuthenticated) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    const nextPath = `${pathname}${request.nextUrl.search}`;
+    url.searchParams.set("next", nextPath);
+    return NextResponse.redirect(url);
+  }
 
   const isAdminPath = pathname.startsWith("/admin");
-  const isShopCatalogPath =
-    pathname === "/" || pathname === "/catalog" || pathname.startsWith("/catalog/");
-  const isOrdersPath = pathname === "/orders" || pathname.startsWith("/orders/");
-  const isGuestCheckoutPath = pathname === "/orders/checkout";
 
-  if (isAdminPath) {
-    if (!token || role !== "ADMIN") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("next", pathname);
-      return NextResponse.redirect(url);
-    }
-    return NextResponse.next();
-  }
-
-  if (isShopCatalogPath) {
-    if (role === "ADMIN") {
-      return NextResponse.redirect(new URL("/admin/products", request.url));
-    }
-    return NextResponse.next();
-  }
-
-  if (isOrdersPath) {
-    if (isGuestCheckoutPath) {
-      if (role === "ADMIN") {
-        return NextResponse.redirect(new URL("/admin/products", request.url));
-      }
-      return NextResponse.next();
-    }
-    if (!token) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("next", pathname);
-      return NextResponse.redirect(url);
-    }
-    if (role === "ADMIN") {
-      return NextResponse.redirect(new URL("/admin/products", request.url));
-    }
-    if (role !== "CUSTOMER") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("next", pathname);
-      return NextResponse.redirect(url);
-    }
-    return NextResponse.next();
-  }
-
-  if (pathname === "/" && token && role === "ADMIN") {
+  if (role === "ADMIN" && !isAdminPath) {
     return NextResponse.redirect(new URL("/admin/orders", request.url));
+  }
+
+  if (role === "CUSTOMER" && isAdminPath) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/", "/admin/:path*", "/catalog", "/catalog/:path*", "/orders", "/orders/:path*"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };

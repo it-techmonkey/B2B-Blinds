@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/DashboardShell";
 import { OrderStatusBadge } from "@/components/OrderStatusBadge";
+import { PageHeader } from "@/components/PageHeader";
 import { getSession } from "@/lib/auth/get-session";
 import { listMyOrders } from "@/server/services/order.service";
 import { serializeOrderRow } from "@/server/serialize";
@@ -21,43 +22,43 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
 
   return (
     <DashboardShell role="CUSTOMER">
-      <section className="card-dashboard mb-6 p-5 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="section-kicker">Customer dashboard</p>
-            <h1 className="dash-title mt-3">Orders</h1>
+      <div className="content-stack">
+        <PageHeader
+          kicker="Order history"
+          title="Orders"
+          subtitle="Track status, value, and open each order for invoice and line details."
+          actions={
+            <Link href="/orders/checkout" className="btn-primary w-full lg:w-auto">
+              New order
+            </Link>
+          }
+        />
+
+        <section className="grid gap-3 sm:grid-cols-3">
+          <div className="stat-card">
+            <p className="stat-label">Orders this page</p>
+            <p className="stat-value">{data.length}</p>
           </div>
-          <Link href="/orders/checkout" className="btn-primary w-full lg:w-auto">
-            New order
-          </Link>
-        </div>
-      </section>
+          <div className="stat-card">
+            <p className="stat-label">In progress</p>
+            <p className="stat-value">{openCount}</p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label">Page value</p>
+            <p className="stat-value">${totalValue.toFixed(2)}</p>
+          </div>
+        </section>
 
-      <section className="mb-6 grid gap-3 sm:grid-cols-3">
-        <div className="stat-card">
-          <p className="stat-label">Orders this page</p>
-          <p className="stat-value">{data.length}</p>
-        </div>
-        <div className="stat-card">
-          <p className="stat-label">In progress</p>
-          <p className="stat-value">{openCount}</p>
-        </div>
-        <div className="stat-card">
-          <p className="stat-label">Page value</p>
-          <p className="stat-value">${totalValue.toFixed(2)}</p>
-        </div>
-      </section>
-
-      {data.length === 0 ? (
-        <div className="card-dashboard flex flex-col items-center justify-center px-6 py-16 text-center">
-          <p className="mt-1 text-xl font-semibold tracking-[-0.04em] text-foreground">No orders yet</p>
-          <Link href="/" className="btn-primary mt-5">
-            Open catalog
-          </Link>
-        </div>
-      ) : (
-        <div className="table-shell overflow-x-auto">
-          <table className="w-full min-w-[680px] text-sm">
+        {data.length === 0 ? (
+          <div className="card-dashboard flex flex-col items-center justify-center px-6 py-16 text-center">
+            <p className="mt-1 text-xl font-semibold tracking-[-0.04em] text-foreground">No orders yet</p>
+            <Link href="/" className="btn-primary mt-5">
+              Open catalog
+            </Link>
+          </div>
+        ) : (
+          <div className="table-shell overflow-x-auto">
+            <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="table-head">
                 <th className="px-4 py-3 font-medium">Order</th>
@@ -72,7 +73,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 const s = serializeOrderRow(o);
                 return (
                   <tr key={s.id} className="table-row">
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{s.id}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">Ref #{s.id.slice(0, 8)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{new Date(s.createdAt).toLocaleString()}</td>
                     <td className="px-4 py-3">
                       <OrderStatusBadge status={s.status} />
@@ -87,27 +88,28 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 );
               })}
             </tbody>
-          </table>
-        </div>
-      )}
+            </table>
+          </div>
+        )}
 
-      {pagination.totalPages > 1 ? (
-        <nav className="mt-4 flex items-center justify-center gap-2" aria-label="Pagination">
-          {page > 1 ? (
-            <Link href={`/orders?page=${page - 1}`} className="btn-secondary h-9 px-3 text-xs">
-              Previous
-            </Link>
-          ) : null}
-          <span className="px-3 text-xs text-muted-foreground">
-            {page} / {pagination.totalPages}
-          </span>
-          {page < pagination.totalPages ? (
-            <Link href={`/orders?page=${page + 1}`} className="btn-secondary h-9 px-3 text-xs">
-              Next
-            </Link>
-          ) : null}
-        </nav>
-      ) : null}
+        {pagination.totalPages > 1 ? (
+          <nav className="flex items-center justify-center gap-2" aria-label="Pagination">
+            {page > 1 ? (
+              <Link href={`/orders?page=${page - 1}`} className="btn-secondary h-9 px-3 text-xs">
+                Previous
+              </Link>
+            ) : null}
+            <span className="px-3 text-xs text-muted-foreground">
+              {page} / {pagination.totalPages}
+            </span>
+            {page < pagination.totalPages ? (
+              <Link href={`/orders?page=${page + 1}`} className="btn-secondary h-9 px-3 text-xs">
+                Next
+              </Link>
+            ) : null}
+          </nav>
+        ) : null}
+      </div>
     </DashboardShell>
   );
 }

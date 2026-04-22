@@ -60,7 +60,10 @@ html {
 
 body {
   min-height: 100vh;
-  background: var(--background);
+  background:
+    radial-gradient(1200px 700px at 12% -10%, rgba(31, 79, 174, 0.14), transparent 58%),
+    radial-gradient(900px 640px at 92% -12%, rgba(16, 122, 91, 0.1), transparent 62%),
+    linear-gradient(180deg, #f4f8fc 0%, #edf2f7 44%, #e7eef6 100%);
   color: var(--foreground);
   line-height: 1.55;
   letter-spacing: -0.01em;
@@ -84,7 +87,7 @@ body {
   }
 
   .dash-title {
-    font-family: var(--font-heading);
+    font-family: var(--font-playfair), var(--font-heading);
     font-size: clamp(1.65rem, 1.2rem + 1.2vw, 2.2rem);
     font-weight: 600;
     line-height: 1.15;
@@ -149,8 +152,18 @@ body {
   }
 
   .dashboard-surface {
-    @apply min-h-[calc(100vh-2rem)] rounded-[18px] border border-border bg-white p-4 md:min-h-[calc(100vh-3rem)] md:p-6 lg:p-8;
-    box-shadow: var(--shadow-sm);
+    @apply min-h-[calc(100vh-2rem)] rounded-[22px] border border-border bg-white p-4 md:min-h-[calc(100vh-3rem)] md:p-6 lg:p-8;
+    box-shadow: 0 28px 60px -48px rgba(15, 24, 38, 0.24);
+    position: relative;
+  }
+
+  .dashboard-surface::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    pointer-events: none;
   }
 
   .stat-card {
@@ -167,13 +180,23 @@ body {
   }
 
   .card-dashboard {
-    @apply rounded-[14px] border border-border bg-white text-card-foreground;
-    box-shadow: var(--shadow-sm);
+    @apply rounded-[16px] border border-border bg-white text-card-foreground;
+    box-shadow: 0 20px 44px -36px rgba(15, 24, 38, 0.2);
+    position: relative;
+  }
+
+  .card-dashboard::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.68);
+    pointer-events: none;
   }
 
   .table-shell {
     @apply overflow-hidden rounded-[14px] border border-border bg-white;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 18px 36px -34px rgba(15, 24, 38, 0.22);
   }
 
   .table-head {
@@ -228,6 +251,25 @@ body {
     box-shadow: var(--shadow-sm);
   }
 
+  .auth-shell {
+    @apply relative flex min-h-screen items-center justify-center px-4 py-10 sm:px-6;
+  }
+
+  .auth-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(520px 280px at 8% 12%, rgba(31, 79, 174, 0.12), transparent 68%),
+      radial-gradient(520px 280px at 92% 86%, rgba(18, 122, 87, 0.1), transparent 68%);
+  }
+
+  .auth-shell > * {
+    position: relative;
+    z-index: 1;
+  }
+
   .skeleton-bar {
     @apply h-10 animate-pulse rounded-[14px] bg-muted;
   }
@@ -246,18 +288,36 @@ body {
   }
 
   .badge-created {
-    @apply border-amber-200 bg-amber-50 text-amber-800;
+    @apply border-[#e6dccb] bg-[#f5efe5] text-[#5a4831];
   }
 
   .badge-confirmed {
-    @apply border-sky-200 bg-sky-50 text-sky-800;
+    @apply border-[#d8e2d0] bg-[#edf3e8] text-[#42593a];
   }
 
   .badge-completed {
-    @apply border-emerald-200 bg-emerald-50 text-emerald-800;
+    @apply border-[#d2dfd7] bg-[#e8f1ec] text-[#355549];
   }
 
   .badge-neutral {
     @apply border-border bg-muted text-muted-foreground;
+  }
+
+  .page-header {
+    @apply rounded-[18px] border border-border bg-white/88 px-5 py-5 backdrop-blur-md sm:px-6;
+    box-shadow: 0 18px 34px -30px rgba(15, 24, 38, 0.22);
+  }
+
+  .page-title {
+    font-family: var(--font-playfair), var(--font-heading);
+    font-size: clamp(1.75rem, 1.24rem + 1.2vw, 2.35rem);
+    font-weight: 600;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    color: var(--foreground-strong);
+  }
+
+  .content-stack {
+    @apply space-y-6 md:space-y-7;
   }
 }

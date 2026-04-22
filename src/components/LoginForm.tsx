@@ -23,7 +23,7 @@ export function LoginForm() {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      const fallback = res.user.role === "ADMIN" ? "/admin/orders" : "/orders";
+      const fallback = res.user.role === "ADMIN" ? "/admin/orders" : "/";
       const dest = nextPath || fallback;
       router.push(dest);
       router.refresh();

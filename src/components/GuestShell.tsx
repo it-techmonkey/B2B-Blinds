@@ -4,7 +4,7 @@ export function GuestShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-screen overflow-hidden">
       <header className="sticky top-0 z-30 px-4 pt-4 sm:px-6">
-        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 rounded-[24px] border border-white/70 bg-white/84 px-4 py-3 backdrop-blur-xl sm:flex-nowrap sm:px-5">
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 rounded-[24px] border border-white/70 bg-white/86 px-4 py-3 shadow-[0_18px_40px_-30px_rgba(15,24,38,0.3)] backdrop-blur-xl sm:flex-nowrap sm:px-5">
           <div>
             <Link href="/" className="brand-mark text-base text-foreground">
               B2B Blinds
@@ -15,12 +15,14 @@ export function GuestShell({ children }: { children: React.ReactNode }) {
               Catalog
             </Link>
             <Link href="/login" className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
-              Admin login
+              Login
             </Link>
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-[1440px] px-4 pb-10 pt-6 sm:px-6 md:pt-8">{children}</main>
+      <main className="mx-auto max-w-[1440px] px-4 pb-10 pt-6 sm:px-6 md:pt-8">
+        <div className="content-stack">{children}</div>
+      </main>
     </div>
   );
 }
