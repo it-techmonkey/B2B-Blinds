@@ -341,7 +341,7 @@ export function CatalogCart({ isCustomer = false }: { isCustomer?: boolean }) {
                       </div>
                     ) : (
                       <div className="rounded-[14px] border border-dashed border-border/80 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
-                        No variant selected yet. Choose a size from the dropdown and click "Add variant" to start.
+                        No variant selected yet. Choose a size from the dropdown and click &quot;Add variant&quot; to start.
                       </div>
                     )}
                   </article>
