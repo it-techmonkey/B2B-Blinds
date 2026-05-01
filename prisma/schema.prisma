@@ -16,8 +16,8 @@ enum UserRole {
 
 enum OrderStatus {
   CREATED
-  CONFIRMED
-  COMPLETED
+  SHIPPED
+  DELIVERED
 }
 
 enum VariantUnit {
@@ -26,13 +26,19 @@ enum VariantUnit {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
   passwordHash String   @map("password_hash")
-  role         UserRole @default(CUSTOMER)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  role        UserRole @default(CUSTOMER)
+  /** New self-serve registrations require admin approval before login. */
+  approved    Boolean  @default(true)
+  businessName String? @map("business_name")
+  phone       String?
+  invoiceAddress  String? @map("invoice_address") @db.Text
+  deliveryAddress String? @map("delivery_address") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   orders Order[]
 

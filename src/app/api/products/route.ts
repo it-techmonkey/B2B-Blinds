@@ -17,13 +17,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const q = Object.fromEntries(searchParams.entries());
     const { page, limit } = paginationSchema.parse(q);
+    const categoryRaw = typeof q.category === "string" ? q.category.trim() : "";
+    const categoryName = categoryRaw.length > 0 ? categoryRaw : undefined;
 
     const auth = await requireAuth(request).catch(() => null);
     if (auth?.role === "ADMIN") {
-      const result = await listProductsAdmin(page, limit);
+      const result = categoryName
+        ? await listProductsPublic(page, limit, categoryName)
+        : await listProductsAdmin(page, limit);
       return jsonOk(result);
     }
-    const result = await listProductsPublic(page, limit);
+    const result = await listProductsPublic(page, limit, categoryName);
     return jsonOk(result);
   } catch (e) {
     if (e instanceof ZodError) {

@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/DashboardShell";
 import { OrderStatusBadge } from "@/components/OrderStatusBadge";
 import { PageHeader } from "@/components/PageHeader";
+import { ProfileDetailsForm } from "@/components/ProfileDetailsForm";
 import { getSession } from "@/lib/auth/get-session";
+import { prisma } from "@/lib/db";
 import { serializeOrderRow } from "@/server/serialize";
 import { listMyOrders } from "@/server/services/order.service";
 
@@ -13,9 +15,25 @@ export default async function ProfilePage() {
     redirect("/login?next=/profile");
   }
 
+  const user = await prisma.user.findUnique({
+    where: { id: session.sub },
+    select: {
+      name: true,
+      email: true,
+      businessName: true,
+      phone: true,
+      invoiceAddress: true,
+      deliveryAddress: true,
+    },
+  });
+  if (!user) {
+    redirect("/login?next=/profile");
+  }
+
   const { data } = await listMyOrders(session.sub, 1, 5);
   const recent = data.map(serializeOrderRow);
   const totalSpent = recent.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+  const headerLabel = user.name?.trim() || user.email;
 
   return (
     <DashboardShell role="CUSTOMER">
@@ -23,12 +41,21 @@ export default async function ProfilePage() {
         <PageHeader
           kicker="Customer profile"
           title="Profile and order history"
-          subtitle={session.email}
+          subtitle={headerLabel}
           actions={
             <Link href="/" className="btn-primary w-full lg:w-auto">
               Place new order
             </Link>
           }
+        />
+
+        <ProfileDetailsForm
+          initial={{
+            businessName: user.businessName,
+            phone: user.phone,
+            invoiceAddress: user.invoiceAddress,
+            deliveryAddress: user.deliveryAddress,
+          }}
         />
 
         <section className="grid gap-3 sm:grid-cols-3">

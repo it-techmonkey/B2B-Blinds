@@ -84,7 +84,18 @@ export const createOrderSchema = z.object({
 });
 
 export const orderStatusSchema = z.object({
-  status: z.enum([OrderStatus.CREATED, OrderStatus.CONFIRMED, OrderStatus.COMPLETED]),
+  status: z.enum([OrderStatus.CREATED, OrderStatus.SHIPPED, OrderStatus.DELIVERED]),
+});
+
+export const profilePatchSchema = z.object({
+  businessName: z.string().trim().max(200).optional().nullable(),
+  phone: z.string().trim().max(40).optional().nullable(),
+  invoiceAddress: z.string().trim().max(8000).optional().nullable(),
+  deliveryAddress: z.string().trim().max(8000).optional().nullable(),
+});
+
+export const adminCreateOrderSchema = createOrderSchema.extend({
+  userId: z.string().min(1),
 });
 
 export const paginationSchema = z.object({

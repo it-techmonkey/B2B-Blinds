@@ -2,7 +2,7 @@ import PDFDocument from "pdfkit";
 import type { Order, OrderItem, User } from "@prisma/client";
 import { formatDecimal } from "@/server/serialize";
 
-type OrderForInvoice = Order & {
+export type OrderForInvoice = Order & {
   items: OrderItem[];
   user?: Pick<User, "id" | "name" | "email"> | null;
 };

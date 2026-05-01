@@ -10,15 +10,17 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { name, email, password } = registerSchema.parse(body);
-    const { token, user } = await registerCustomer(name, email, password);
-    const res = jsonOk({ user }, 201);
-    res.cookies.set(COOKIE_NAME, token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    const { token, user, pendingApproval } = await registerCustomer(name, email, password);
+    const res = jsonOk({ user, pendingApproval: pendingApproval ?? false }, 201);
+    if (token) {
+      res.cookies.set(COOKIE_NAME, token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
     return res;
   } catch (e) {
     if (e instanceof ZodError) {

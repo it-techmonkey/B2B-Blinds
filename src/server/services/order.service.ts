@@ -125,7 +125,11 @@ export async function getOrderById(orderId: string, requesterId: string, isAdmin
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
-      items: true,
+      items: {
+        include: {
+          variant: { select: { id: true, size: true, stock: true } },
+        },
+      },
       user: { select: { id: true, name: true, email: true } },
     },
   });
@@ -174,7 +178,7 @@ export async function listAllOrders(page: number, limit: number) {
   };
 }
 
-export async function updateOrderStatus(orderId: string, status: "CREATED" | "CONFIRMED" | "COMPLETED") {
+export async function updateOrderStatus(orderId: string, status: "CREATED" | "SHIPPED" | "DELIVERED") {
   const existing = await prisma.order.findUnique({ where: { id: orderId } });
   if (!existing) throw new NotFoundError("Order not found");
   return prisma.order.update({

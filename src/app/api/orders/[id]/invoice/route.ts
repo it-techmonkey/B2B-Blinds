@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrderById } from "@/server/services/order.service";
-import { buildInvoicePdf } from "@/server/services/invoice.service";
+import { buildInvoicePdf, type OrderForInvoice } from "@/server/services/invoice.service";
 import { requireAuth } from "@/lib/auth/api";
 import { jsonError } from "@/lib/http";
 import { AppError, UnauthorizedError } from "@/server/errors";
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, context: Ctx) {
     const { id } = await context.params;
     const invoiceAccessToken = new URL(request.url).searchParams.get("token");
 
-    let order: Awaited<ReturnType<typeof getOrderById>>;
+    let order: OrderForInvoice;
     try {
       const user = await requireAuth(request);
       order = await getOrderById(id, user.sub, user.role === "ADMIN");

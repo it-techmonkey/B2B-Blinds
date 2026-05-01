@@ -23,7 +23,9 @@ export function serializeOrderRow(o: Order) {
 }
 
 type OrderWithRelations = Order & {
-  items: OrderItem[];
+  items: (OrderItem & {
+    variant?: { id: string; size: string; stock: number } | null;
+  })[];
   user?: { id: string; name: string; email: string } | null;
 };
 
@@ -55,6 +57,7 @@ export function serializeOrder(o: OrderWithRelations) {
       price: dec(i.price),
       quantity: i.quantity,
       total: dec(i.total),
+      stockOnHand: i.variant?.stock ?? null,
     })),
   };
 }

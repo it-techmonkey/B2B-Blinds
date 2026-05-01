@@ -16,8 +16,8 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "B2B Blinds",
-  description: "B2B ordering and order management.",
+  title: "Hyde Park Wood Ltd — Trade portal",
+  description: "Hyde Park Wood Ltd wholesale blinds ordering, invoices, and order tracking.",
 };
 
 export default function RootLayout({

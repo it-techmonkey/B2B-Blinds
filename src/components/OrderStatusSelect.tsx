@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-const STATUSES = ["CREATED", "CONFIRMED", "COMPLETED"] as const;
+const STATUSES = ["CREATED", "SHIPPED", "DELIVERED"] as const;
 
 const LABELS: Record<string, string> = {
   CREATED: "Created",
-  CONFIRMED: "Confirmed",
-  COMPLETED: "Completed",
+  SHIPPED: "Shipped",
+  DELIVERED: "Delivered",
 };
 
 export function OrderStatusSelect({

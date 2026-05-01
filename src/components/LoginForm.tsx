@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { apiJson } from "@/lib/api-client";
 import { safeNextPath } from "@/lib/safe-next-path";
+import { PasswordField } from "@/components/PasswordField";
 
 export function LoginForm() {
   const router = useRouter();
@@ -52,21 +53,14 @@ export function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
         />
       </div>
-      <div>
-        <label className="field-label" htmlFor="login-password">
-          Password
-        </label>
-        <input
-          id="login-password"
-          type="password"
-          required
-          autoComplete="current-password"
-          className="input-field"
-          placeholder="Enter password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-      </div>
+      <PasswordField
+        id="login-password"
+        label="Password"
+        autoComplete="current-password"
+        placeholder="Enter password"
+        value={password}
+        onChange={setPassword}
+      />
       <button type="submit" disabled={loading} className="btn-primary mt-2 w-full">
         {loading ? "Signing in…" : "Sign in"}
       </button>

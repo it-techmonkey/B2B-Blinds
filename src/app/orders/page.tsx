@@ -18,7 +18,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const { data, pagination } = await listMyOrders(session.sub, page, 20);
 
   const totalValue = data.reduce((sum, o) => sum + Number(o.totalAmount), 0);
-  const openCount = data.filter((o) => o.status !== "COMPLETED").length;
+  const openCount = data.filter((o) => o.status !== "DELIVERED").length;
 
   return (
     <DashboardShell role="CUSTOMER">

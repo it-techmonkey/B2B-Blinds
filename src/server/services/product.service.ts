@@ -8,6 +8,21 @@ function decimalToString(d: Prisma.Decimal): string {
 
 const variantInclude = { orderBy: { size: "asc" as const } };
 
+/** Prefer numeric order for sizes like 45, 57, 61, 107 over lexicographic sort. */
+function variantNumericSortKey(size: string): number {
+  const m = size.match(/\d+/);
+  return m ? Number.parseInt(m[0], 10) : Number.MAX_SAFE_INTEGER;
+}
+
+function sortVariantsBySize<T extends { size: string }>(variants: T[]): T[] {
+  return [...variants].sort((a, b) => {
+    const na = variantNumericSortKey(a.size);
+    const nb = variantNumericSortKey(b.size);
+    if (na !== nb) return na - nb;
+    return a.size.localeCompare(b.size, undefined, { numeric: true });
+  });
+}
+
 export type VariantInput = {
   size: string;
   price: number;
@@ -38,7 +53,7 @@ export function serializeVariant(v: { id: string; size: string; price: Prisma.De
 export function serializeProductListRow(
   p: Prisma.ProductGetPayload<{ include: { category: true; variants: true } }>
 ) {
-  const variants = p.variants.map(serializeVariant);
+  const variants = sortVariantsBySize(p.variants).map(serializeVariant);
   let minP = p.variants[0]?.price ?? new Prisma.Decimal(0);
   let maxP = p.variants[0]?.price ?? new Prisma.Decimal(0);
   for (const v of p.variants) {
@@ -60,9 +75,18 @@ export function serializeProductListRow(
   };
 }
 
-export async function listProductsPublic(page: number, limit: number) {
+export async function listProductsPublic(page: number, limit: number, categoryName?: string) {
   const skip = (page - 1) * limit;
-  const where = { isActive: true };
+  const where: Prisma.ProductWhereInput = {
+    isActive: true,
+    ...(categoryName
+      ? {
+          category: {
+            name: { equals: categoryName, mode: "insensitive" as const },
+          },
+        }
+      : {}),
+  };
   const [items, total] = await Promise.all([
     prisma.product.findMany({
       where,

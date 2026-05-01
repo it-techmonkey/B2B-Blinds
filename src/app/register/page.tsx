@@ -21,7 +21,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
         <div className="w-full">
           <div className="mb-6 space-y-3">
             <Link href="/" className="brand-mark text-base text-foreground">
-              B2B Blinds
+              Hyde Park Wood Ltd
             </Link>
             <h1 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-foreground">Create account</h1>
             <p className="text-sm text-muted-foreground">Set up your business profile to place and track wholesale orders.</p>

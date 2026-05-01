@@ -23,8 +23,8 @@ export default async function AdminOrdersPage({
   const { data, pagination } = await listAllOrders(page, 20);
 
   const totalValue = data.reduce((sum, o) => sum + Number(o.totalAmount), 0);
-  const openOrders = data.filter((o) => o.status !== "COMPLETED").length;
-  const completed = data.filter((o) => o.status === "COMPLETED").length;
+  const openOrders = data.filter((o) => o.status !== "DELIVERED").length;
+  const completed = data.filter((o) => o.status === "DELIVERED").length;
 
   return (
     <DashboardShell role="ADMIN">
@@ -33,6 +33,11 @@ export default async function AdminOrdersPage({
           kicker="Admin operations"
           title="Orders"
           subtitle="Monitor incoming orders, adjust statuses, and share invoices."
+          actions={
+            <Link href="/admin/orders/new" className="btn-primary w-full lg:w-auto">
+              New order for client
+            </Link>
+          }
         />
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

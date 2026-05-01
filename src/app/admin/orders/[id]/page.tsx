@@ -95,6 +95,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             <tr className="table-head">
               <th className="px-4 py-2.5 font-medium">Product</th>
               <th className="px-4 py-2.5 font-medium">Size</th>
+              <th className="px-4 py-2.5 text-right font-medium">Stock</th>
               <th className="px-4 py-2.5 text-right font-medium">Qty</th>
               <th className="px-4 py-2.5 text-right font-medium">Price</th>
               <th className="px-4 py-2.5 text-right font-medium">Line total</th>
@@ -105,6 +106,9 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               <tr key={i.id} className="table-row">
                 <td className="px-4 py-2.5">{i.productName}</td>
                 <td className="px-4 py-2.5 text-muted-foreground">{i.size ?? "—"}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
+                  {i.stockOnHand != null ? i.stockOnHand : "—"}
+                </td>
                 <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">{i.quantity}</td>
                 <td className="px-4 py-2.5 text-right tabular-nums">${i.price}</td>
                 <td className="px-4 py-2.5 text-right font-medium tabular-nums">${i.total}</td>

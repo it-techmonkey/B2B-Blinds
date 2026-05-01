@@ -11,9 +11,9 @@ export async function CatalogShopPage() {
   const inner = (
     <>
       <PageHeader
-        kicker="Product catalog"
+        kicker="Hyde Park Wood catalog"
         title="Catalog"
-        subtitle="Browse variants, build your cart, and move to checkout when quantities are ready."
+        subtitle="Fabric lines and hardware for Hyde Park Wood Ltd — variants listed by width (mm). Add lines to your cart and checkout when ready."
       />
       <CatalogCart isCustomer={isCustomer} />
     </>

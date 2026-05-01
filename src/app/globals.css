@@ -291,11 +291,11 @@ body {
     @apply border-[#e6dccb] bg-[#f5efe5] text-[#5a4831];
   }
 
-  .badge-confirmed {
+  .badge-shipped {
     @apply border-[#d8e2d0] bg-[#edf3e8] text-[#42593a];
   }
 
-  .badge-completed {
+  .badge-delivered {
     @apply border-[#d2dfd7] bg-[#e8f1ec] text-[#355549];
   }
 

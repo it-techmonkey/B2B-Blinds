@@ -1,11 +1,18 @@
+const LABELS: Record<string, string> = {
+  CREATED: "Created",
+  SHIPPED: "Shipped",
+  DELIVERED: "Delivered",
+};
+
 export function OrderStatusBadge({ status }: { status: string }) {
   const c =
     status === "CREATED"
       ? "badge-created"
-      : status === "CONFIRMED"
-        ? "badge-confirmed"
-        : status === "COMPLETED"
-          ? "badge-completed"
+      : status === "SHIPPED"
+        ? "badge-shipped"
+        : status === "DELIVERED"
+          ? "badge-delivered"
           : "badge-neutral";
-  return <span className={`badge ${c}`}>{status}</span>;
+  const label = LABELS[status] ?? status;
+  return <span className={`badge ${c}`}>{label}</span>;
 }

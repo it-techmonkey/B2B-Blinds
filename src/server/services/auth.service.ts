@@ -16,6 +16,11 @@ export async function loginUser(email: string, password: string) {
   if (!ok) {
     throw new UnauthorizedError("Invalid email or password");
   }
+  if (user.role === UserRole.CUSTOMER && !user.approved) {
+    throw new UnauthorizedError(
+      "Your account is pending approval. Please wait for Hyde Park Wood Ltd to activate your login."
+    );
+  }
   const token = await signToken({
     sub: user.id,
     email: user.email,
@@ -38,15 +43,11 @@ export async function registerCustomer(name: string, email: string, password: st
         email: normalized,
         passwordHash,
         role: UserRole.CUSTOMER,
+        approved: false,
       },
-      select: { id: true, name: true, email: true, role: true },
+      select: { id: true, name: true, email: true, role: true, approved: true },
     });
-    const token = await signToken({
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-    });
-    return { token, user };
+    return { token: null as string | null, user, pendingApproval: true };
   } catch (e: unknown) {
     const code = e && typeof e === "object" && "code" in e ? (e as { code: string }).code : "";
     if (code === "P2002") {
