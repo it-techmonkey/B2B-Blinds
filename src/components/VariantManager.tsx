@@ -64,6 +64,19 @@ export function VariantManager({ productId, initial }: { productId: string; init
     }
   }
 
+  async function addStockArrival(variantId: string, qty: number, costPerUnit: number) {
+    setError(null);
+    try {
+      await apiJson(`/api/products/${productId}/variants/${variantId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ qty, costPerUnit }),
+      });
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Stock update failed");
+    }
+  }
+
   async function addVariant(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -108,7 +121,13 @@ export function VariantManager({ productId, initial }: { productId: string; init
           </thead>
           <tbody>
             {variants.map((v) => (
-              <VariantRowEditor key={v.id} v={v} onSave={saveRow} onDelete={() => removeRow(v.id)} />
+              <VariantRowEditor
+                key={v.id}
+                v={v}
+                onSave={saveRow}
+                onDelete={() => removeRow(v.id)}
+                onAddStock={addStockArrival}
+              />
             ))}
           </tbody>
         </table>
@@ -163,62 +182,133 @@ function VariantRowEditor({
   v,
   onSave,
   onDelete,
+  onAddStock,
 }: {
   v: Variant;
   onSave: (v: Variant) => void;
   onDelete: () => void;
+  onAddStock: (variantId: string, qty: number, costPerUnit: number) => void;
 }) {
   const [size, setSize] = useState(v.size);
   const [price, setPrice] = useState(typeof v.price === "string" ? v.price : String(v.price));
   const [stock, setStock] = useState(String(v.stock));
   const [unit, setUnit] = useState<"PIECE" | "METER">(v.unit);
+  const [showArrival, setShowArrival] = useState(false);
+  const [arrivalQty, setArrivalQty] = useState("");
+  const [arrivalCost, setArrivalCost] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submitArrival(e: React.FormEvent) {
+    e.preventDefault();
+    const qty = parseInt(arrivalQty, 10);
+    const cost = parseFloat(arrivalCost) || 0;
+    if (!qty || qty <= 0) return;
+    setSubmitting(true);
+    await onAddStock(v.id, qty, cost);
+    setArrivalQty("");
+    setArrivalCost("");
+    setShowArrival(false);
+    setSubmitting(false);
+  }
 
   return (
-    <tr className="table-row">
-      <td className="px-3 py-2">
-        <input className="input-field-sm w-full" value={size} onChange={(e) => setSize(e.target.value)} />
-      </td>
-      <td className="px-3 py-2 text-right">
-        <input
-          type="number"
-          step="0.01"
-          className="input-field-sm w-24 text-right"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-        />
-      </td>
-      <td className="px-3 py-2 text-right">
-        <input
-          type="number"
-          min={0}
-          className="input-field-sm w-20 text-right"
-          value={stock}
-          onChange={(e) => setStock(e.target.value)}
-        />
-      </td>
-      <td className="px-3 py-2">
-        <select
-          className="input-field-sm w-full min-w-[5rem]"
-          value={unit}
-          onChange={(e) => setUnit(e.target.value as "PIECE" | "METER")}
-        >
-          <option value="PIECE">piece</option>
-          <option value="METER">meter</option>
-        </select>
-      </td>
-      <td className="px-3 py-2 text-right text-xs">
-        <button
-          type="button"
-          className="font-medium text-primary hover:underline"
-          onClick={() => onSave({ ...v, size, price, stock: Number(stock), unit })}
-        >
-          Save
-        </button>
-        <span className="mx-1.5 text-muted-foreground">·</span>
-        <button type="button" className="font-medium text-destructive hover:underline" onClick={onDelete}>
-          Delete
-        </button>
-      </td>
-    </tr>
+    <>
+      <tr className="table-row">
+        <td className="px-3 py-2">
+          <input className="input-field-sm w-full" value={size} onChange={(e) => setSize(e.target.value)} />
+        </td>
+        <td className="px-3 py-2 text-right">
+          <input
+            type="number"
+            step="0.01"
+            className="input-field-sm w-24 text-right"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+          />
+        </td>
+        <td className="px-3 py-2 text-right">
+          <input
+            type="number"
+            min={0}
+            className="input-field-sm w-20 text-right"
+            value={stock}
+            onChange={(e) => setStock(e.target.value)}
+          />
+        </td>
+        <td className="px-3 py-2">
+          <select
+            className="input-field-sm w-full min-w-20"
+            value={unit}
+            onChange={(e) => setUnit(e.target.value as "PIECE" | "METER")}
+          >
+            <option value="PIECE">piece</option>
+            <option value="METER">meter</option>
+          </select>
+        </td>
+        <td className="px-3 py-2 text-right text-xs">
+          <button
+            type="button"
+            className="font-medium text-primary hover:underline"
+            onClick={() => onSave({ ...v, size, price, stock: Number(stock), unit })}
+          >
+            Save
+          </button>
+          <span className="mx-1.5 text-muted-foreground">·</span>
+          <button
+            type="button"
+            className="font-medium text-primary hover:underline"
+            onClick={() => setShowArrival((s) => !s)}
+          >
+            + Stock
+          </button>
+          <span className="mx-1.5 text-muted-foreground">·</span>
+          <button type="button" className="font-medium text-destructive hover:underline" onClick={onDelete}>
+            Delete
+          </button>
+        </td>
+      </tr>
+      {showArrival && (
+        <tr className="bg-muted/30">
+          <td colSpan={5} className="px-3 py-3">
+            <form onSubmit={submitArrival} className="flex flex-wrap items-end gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground">Qty received</label>
+                <input
+                  required
+                  type="number"
+                  min={1}
+                  placeholder="e.g. 100"
+                  className="input-field-sm w-28"
+                  value={arrivalQty}
+                  onChange={(e) => setArrivalQty(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground">Cost per unit</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="e.g. 4.50"
+                  className="input-field-sm w-28"
+                  value={arrivalCost}
+                  onChange={(e) => setArrivalCost(e.target.value)}
+                />
+              </div>
+              <button type="submit" disabled={submitting} className="btn-primary h-9 text-xs">
+                Confirm arrival
+              </button>
+              <button
+                type="button"
+                className="h-9 text-xs text-muted-foreground hover:underline"
+                onClick={() => setShowArrival(false)}
+              >
+                Cancel
+              </button>
+            </form>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }

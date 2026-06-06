@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiJson } from "@/lib/api-client";
-import { CATALOG_CATEGORY_NAME } from "@/lib/site";
 
 type Variant = { id: string; size: string; price: string; stock: number; unit: string };
 
@@ -76,9 +75,7 @@ export function AdminNewOrderClient() {
       try {
         const [uRes, pRes] = await Promise.all([
           apiJson<{ data: CustomerRow[] }>("/api/admin/users"),
-          apiJson<{ data: ProductRow[] }>(
-            `/api/products?page=1&limit=200&category=${encodeURIComponent(CATALOG_CATEGORY_NAME)}`
-          ),
+          apiJson<{ data: ProductRow[] }>("/api/products?page=1&limit=500"),
         ]);
         if (cancelled) return;
         setCustomers(uRes.data);

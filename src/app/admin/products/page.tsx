@@ -3,7 +3,7 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { DeleteProductButton } from "@/components/DeleteProductButton";
 import { PageHeader } from "@/components/PageHeader";
 import { getSession } from "@/lib/auth/get-session";
-import { listProductsAdmin } from "@/server/services/product.service";
+import { listProductsAdmin, getProductStats } from "@/server/services/product.service";
 import { redirect } from "next/navigation";
 
 export default async function AdminProductsPage({
@@ -18,11 +18,10 @@ export default async function AdminProductsPage({
 
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page) || 1);
-  const { data, pagination } = await listProductsAdmin(page, 20);
-
-  const activeCount = data.filter((p) => p.isActive).length;
-  const variantCount = data.reduce((sum, p) => sum + p.variants.length, 0);
-  const stockCount = data.reduce((sum, p) => sum + p.totalStock, 0);
+  const [{ data, pagination }, stats] = await Promise.all([
+    listProductsAdmin(page, 20),
+    getProductStats(),
+  ]);
 
   return (
     <DashboardShell role="ADMIN">
@@ -40,16 +39,16 @@ export default async function AdminProductsPage({
 
         <section className="grid gap-3 xl:grid-cols-3">
           <div className="stat-card">
-            <p className="stat-label">Products on page</p>
-            <p className="stat-value">{data.length}</p>
+            <p className="stat-label">Active / total products</p>
+            <p className="stat-value">{stats.activeProducts} / {stats.totalProducts}</p>
           </div>
           <div className="stat-card">
-            <p className="stat-label">Active / total variants</p>
-            <p className="stat-value">{activeCount} / {variantCount}</p>
+            <p className="stat-label">Total variants</p>
+            <p className="stat-value">{stats.totalVariants}</p>
           </div>
           <div className="stat-card">
             <p className="stat-label">Total stock units</p>
-            <p className="stat-value">{stockCount}</p>
+            <p className="stat-value">{stats.totalStock}</p>
           </div>
         </section>
 

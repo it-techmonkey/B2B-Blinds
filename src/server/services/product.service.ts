@@ -103,6 +103,20 @@ export async function listProductsPublic(page: number, limit: number, categoryNa
   };
 }
 
+export async function getProductStats() {
+  const [totalProducts, activeProducts, variantAgg] = await Promise.all([
+    prisma.product.count(),
+    prisma.product.count({ where: { isActive: true } }),
+    prisma.productVariant.aggregate({ _count: true, _sum: { stock: true } }),
+  ]);
+  return {
+    totalProducts,
+    activeProducts,
+    totalVariants: variantAgg._count,
+    totalStock: variantAgg._sum.stock ?? 0,
+  };
+}
+
 export async function listProductsAdmin(page: number, limit: number) {
   const skip = (page - 1) * limit;
   const [items, total] = await Promise.all([

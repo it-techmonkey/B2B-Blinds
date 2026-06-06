@@ -16,7 +16,7 @@ export default async function AdminNewOrderPage() {
       <PageHeader
         kicker="Admin operations"
         title="New order for client"
-        subtitle="Choose an approved client, add lines from the Hyde Park Wood catalog, and submit. Stock updates per variant size."
+        subtitle="Choose an approved client, add lines from the catalog, and submit. Stock updates per variant size."
         actions={
           <Link href="/admin/orders" className="btn-secondary w-full lg:w-auto">
             Back to orders

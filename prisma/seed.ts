@@ -379,6 +379,100 @@ async function seedHydeParkWoodCatalog() {
   }
 }
 
+async function seedLadderTapes() {
+  const CATEGORY = "Ladder Tapes";
+  const cat = await prisma.category.upsert({
+    where: { name: CATEGORY },
+    update: {},
+    create: { name: CATEGORY },
+  });
+
+  const existing = await prisma.product.findFirst({
+    where: { name: "Ladder Tapes for 50mm Faux Wood", categoryId: cat.id },
+  });
+  if (!existing) {
+    await prisma.product.create({
+      data: {
+        name: "Ladder Tapes for 50mm Faux Wood",
+        categoryId: cat.id,
+        hasVariants: true,
+        isActive: true,
+        variants: {
+          create: [
+            { size: "White — 25mm tape",        price: 0, stock: 0, unit: VariantUnit.PIECE },
+            { size: "White — 38mm tape",        price: 0, stock: 0, unit: VariantUnit.PIECE },
+            { size: "Light Marble — 25mm tape", price: 0, stock: 0, unit: VariantUnit.PIECE },
+            { size: "Light Marble — 38mm tape", price: 0, stock: 0, unit: VariantUnit.PIECE },
+            { size: "Soft Grey — 25mm tape",    price: 0, stock: 0, unit: VariantUnit.PIECE },
+            { size: "Soft Grey — 38mm tape",    price: 0, stock: 0, unit: VariantUnit.PIECE },
+            { size: "Iron Slate — 25mm tape",   price: 0, stock: 0, unit: VariantUnit.PIECE },
+            { size: "Iron Slate — 38mm tape",   price: 0, stock: 0, unit: VariantUnit.PIECE },
+          ],
+        },
+      },
+    });
+    console.log("Ladder Tapes: Ladder Tapes for 50mm Faux Wood (8 variants)");
+  }
+}
+
+async function seedBracketsAndSwatches() {
+  const CATEGORY = "Brackets & Swatches";
+  const cat = await prisma.category.upsert({
+    where: { name: CATEGORY },
+    update: {},
+    create: { name: CATEGORY },
+  });
+
+  const items = [
+    { name: "Extension Face Fix Brackets", size: "100 pcs/box" },
+    { name: "Box Brackets",               size: "100 pcs/box" },
+    { name: "Sample Swatch",              size: "Standard"    },
+  ];
+
+  for (const item of items) {
+    const existing = await prisma.product.findFirst({ where: { name: item.name, categoryId: cat.id } });
+    if (!existing) {
+      await prisma.product.create({
+        data: {
+          name: item.name,
+          categoryId: cat.id,
+          hasVariants: false,
+          isActive: true,
+          variants: { create: [{ size: item.size, price: 0, stock: 0, unit: VariantUnit.PIECE }] },
+        },
+      });
+      console.log(`Brackets & Swatches: ${item.name}`);
+    }
+  }
+}
+
+async function seedToolsAndMachines() {
+  const CATEGORY = "Tools & Machines";
+  const cat = await prisma.category.upsert({
+    where: { name: CATEGORY },
+    update: {},
+    create: { name: CATEGORY },
+  });
+
+  const hoistExisting = await prisma.product.findFirst({
+    where: { name: "Inspection Hoist", categoryId: cat.id },
+  });
+  if (!hoistExisting) {
+    await prisma.product.create({
+      data: {
+        name: "Inspection Hoist",
+        categoryId: cat.id,
+        hasVariants: false,
+        isActive: true,
+        variants: {
+          create: [{ size: "3m × 3m", price: 0, stock: 0, unit: VariantUnit.PIECE }],
+        },
+      },
+    });
+    console.log("Tools & Machines: Inspection Hoist");
+  }
+}
+
 async function main() {
   const adminName = (process.env.ADMIN_NAME ?? "Olivia Carter").trim();
   const adminEmail = (process.env.ADMIN_EMAIL ?? "admin@blinds.com").trim().toLowerCase();
@@ -444,6 +538,9 @@ async function main() {
   console.log("Seeded categories.");
 
   await seedHydeParkWoodCatalog();
+  await seedLadderTapes();
+  await seedBracketsAndSwatches();
+  await seedToolsAndMachines();
 
   const xlsxPath = resolveProductsXlsxPath();
   if (xlsxPath) {
