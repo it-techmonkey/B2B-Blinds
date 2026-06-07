@@ -134,6 +134,14 @@ export async function listProductsAdmin(page: number, limit: number) {
   };
 }
 
+export async function listAllProductsAdmin() {
+  const items = await prisma.product.findMany({
+    orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
+    include: { category: true, variants: variantInclude },
+  });
+  return items.map(serializeProductListRow);
+}
+
 export async function getProductById(id: string) {
   const p = await prisma.product.findUnique({
     where: { id },

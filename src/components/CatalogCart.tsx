@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiJson } from "@/lib/api-client";
 import { readCartPayload, writeCartPayload, type CartLineMeta } from "@/lib/cart-storage";
-import { CATALOG_CATEGORY_NAME } from "@/lib/site";
 
 type Variant = { id: string; size: string; price: string; stock: number; unit: string };
 
@@ -71,12 +70,7 @@ export function CatalogCart({ isCustomer = false }: { isCustomer?: boolean }) {
     let cancelled = false;
     (async () => {
       try {
-        const q = new URLSearchParams({
-          page: "1",
-          limit: "200",
-          category: CATALOG_CATEGORY_NAME,
-        });
-        const res = await apiJson<{ data: ProductRow[] }>(`/api/products?${q.toString()}`);
+        const res = await apiJson<{ data: ProductRow[] }>("/api/products?page=1&limit=500");
         if (cancelled) return;
         setProducts(res.data);
         const initialSelectedVariant: Record<string, string> = {};

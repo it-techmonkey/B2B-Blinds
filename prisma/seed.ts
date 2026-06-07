@@ -263,30 +263,32 @@ async function seedFromProductsXlsx(filePath: string) {
   }
 }
 
-/** Hyde Park Wood Ltd client catalog: fabrics and hardware with size-ordered variants */
-async function seedHydeParkWoodCatalog() {
-  const CATEGORY = "Hyde Park Wood";
+/** Box Blinds catalog: fabric colours with size variants */
+async function seedBoxBlindsCatalog() {
   const cat = await prisma.category.upsert({
-    where: { name: CATEGORY },
+    where: { name: "Box Blinds" },
     update: {},
-    create: { name: CATEGORY },
+    create: { name: "Box Blinds" },
   });
 
   const mmSizes = [
-    { size: "45mm", price: 52 },
-    { size: "57mm", price: 58 },
-    { size: "61mm", price: 64 },
+    { size: "45mm",  price: 52 },
+    { size: "57mm",  price: 58 },
+    { size: "61mm",  price: 64 },
     { size: "107mm", price: 89 },
   ];
 
-  const fabricLines = ["Smooth White", "Texture", "String Grey", "Niagara", "String Night Fall"];
+  const fabricLines = [
+    "Cotton White",
+    "Fiber White",
+    "String Soft Grey",
+    "Light Marble",
+    "String Iron Slate",
+  ];
 
   for (const name of fabricLines) {
-    const existing = await prisma.product.findFirst({
-      where: { name, categoryId: cat.id },
-    });
+    const existing = await prisma.product.findFirst({ where: { name, categoryId: cat.id } });
     if (existing) continue;
-
     await prisma.product.create({
       data: {
         name,
@@ -303,79 +305,7 @@ async function seedHydeParkWoodCatalog() {
         },
       },
     });
-    console.log(`Hyde Park Wood catalog: ${name}`);
-  }
-
-  const ladderExisting = await prisma.product.findFirst({
-    where: { name: "Ladder taps", categoryId: cat.id },
-  });
-  if (!ladderExisting) {
-    await prisma.product.create({
-      data: {
-        name: "Ladder taps",
-        categoryId: cat.id,
-        hasVariants: true,
-        isActive: true,
-        variants: {
-          create: mmSizes.map((l) => ({
-            size: l.size,
-            price: l.price + 12,
-            stock: IMPORT_STOCK,
-            unit: VariantUnit.PIECE,
-          })),
-        },
-      },
-    });
-    console.log("Hyde Park Wood catalog: Ladder taps");
-  }
-
-  const bracketPrices = [26, 29, 32, 38];
-  const bracketExisting = await prisma.product.findFirst({
-    where: { name: "Brackets", categoryId: cat.id },
-  });
-  if (!bracketExisting) {
-    await prisma.product.create({
-      data: {
-        name: "Brackets",
-        categoryId: cat.id,
-        hasVariants: true,
-        isActive: true,
-        variants: {
-          create: mmSizes.map((l, i) => ({
-            size: l.size,
-            price: bracketPrices[i] ?? l.price,
-            stock: IMPORT_STOCK,
-            unit: VariantUnit.PIECE,
-          })),
-        },
-      },
-    });
-    console.log("Hyde Park Wood catalog: Brackets");
-  }
-
-  const swatchExisting = await prisma.product.findFirst({
-    where: { name: "Colour swatches", categoryId: cat.id },
-  });
-  if (!swatchExisting) {
-    await prisma.product.create({
-      data: {
-        name: "Colour swatches",
-        categoryId: cat.id,
-        hasVariants: false,
-        isActive: true,
-        variants: {
-          create: [
-            {
-              size: "Sample set",
-              price: 18,
-              stock: IMPORT_STOCK,
-              unit: VariantUnit.PIECE,
-            },
-          ],
-        },
-      },
-    });
-    console.log("Hyde Park Wood catalog: Colour swatches");
+    console.log(`Box Blinds catalog: ${name}`);
   }
 }
 
@@ -537,7 +467,7 @@ async function main() {
   }
   console.log("Seeded categories.");
 
-  await seedHydeParkWoodCatalog();
+  await seedBoxBlindsCatalog();
   await seedLadderTapes();
   await seedBracketsAndSwatches();
   await seedToolsAndMachines();
