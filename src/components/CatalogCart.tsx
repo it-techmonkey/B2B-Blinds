@@ -18,7 +18,7 @@ type ProductRow = {
 function compactVariantLabel(v: Variant) {
   const compactSize = v.size
     .replace(/\s+/g, " ")
-    .replace(/\s*[xX]\s*/g, " x ")
+    .replace(/(\d)\s*[xX]\s*(\d)/g, "$1 x $2")
     .trim();
   return `${compactSize} · $${v.price}/${v.unit.toLowerCase()}`;
 }

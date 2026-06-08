@@ -6,18 +6,17 @@ function decimalToString(d: Prisma.Decimal): string {
   return d.toFixed(2);
 }
 
-const variantInclude = { orderBy: { size: "asc" as const } };
+const variantInclude = { orderBy: { sortOrder: "asc" as const } };
 
-/** Prefer numeric order for sizes like 45, 57, 61, 107 over lexicographic sort. */
-function variantNumericSortKey(size: string): number {
-  const m = size.match(/\d+/);
-  return m ? Number.parseInt(m[0], 10) : Number.MAX_SAFE_INTEGER;
+function sizeToSortOrder(size: string): number {
+  const m = size.match(/^(\d+(?:\.\d+)?)/);
+  return m ? Math.round(parseFloat(m[1])) : 9999;
 }
 
 function sortVariantsBySize<T extends { size: string }>(variants: T[]): T[] {
   return [...variants].sort((a, b) => {
-    const na = variantNumericSortKey(a.size);
-    const nb = variantNumericSortKey(b.size);
+    const na = sizeToSortOrder(a.size);
+    const nb = sizeToSortOrder(b.size);
     if (na !== nb) return na - nb;
     return a.size.localeCompare(b.size, undefined, { numeric: true });
   });
@@ -171,6 +170,7 @@ export async function createProduct(input: {
           price: new Prisma.Decimal(v.price),
           stock: v.stock,
           unit: v.unit,
+          sortOrder: sizeToSortOrder(v.size),
         })),
       },
     },
@@ -235,6 +235,7 @@ export async function createVariant(
       price: new Prisma.Decimal(input.price),
       stock: input.stock,
       unit: input.unit,
+      sortOrder: sizeToSortOrder(input.size),
     },
   });
   const n = await prisma.productVariant.count({ where: { productId } });
@@ -255,7 +256,7 @@ export async function updateVariant(
   if (!v) throw new NotFoundError("Variant not found");
 
   const data: Prisma.ProductVariantUpdateInput = {};
-  if (input.size !== undefined) data.size = input.size;
+  if (input.size !== undefined) { data.size = input.size; data.sortOrder = sizeToSortOrder(input.size); }
   if (input.price !== undefined) data.price = new Prisma.Decimal(input.price);
   if (input.stock !== undefined) data.stock = input.stock;
   if (input.unit !== undefined) data.unit = input.unit;

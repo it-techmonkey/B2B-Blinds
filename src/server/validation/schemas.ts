@@ -12,7 +12,7 @@ export const registerSchema = z.object({
   password: z.string().min(8).max(128),
 });
 
-export const variantUnitSchema = z.enum([VariantUnit.PIECE, VariantUnit.METER]);
+export const variantUnitSchema = z.enum([VariantUnit.PIECE, VariantUnit.METER, VariantUnit.BOX, VariantUnit.ROLL]);
 
 export const productVariantInputSchema = z.object({
   size: z.string().min(1).max(200),

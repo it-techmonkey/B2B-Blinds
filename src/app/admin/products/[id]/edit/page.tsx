@@ -24,7 +24,7 @@ export default async function EditProductPage({ params }: Props) {
     size: v.size,
     price: v.price.toFixed(2),
     stock: v.stock,
-    unit: v.unit as "PIECE" | "METER",
+    unit: v.unit as "PIECE" | "METER" | "BOX" | "ROLL",
   }));
 
   return (

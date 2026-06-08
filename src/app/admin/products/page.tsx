@@ -64,15 +64,23 @@ export default async function AdminProductsPage() {
                 </span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-190 text-sm">
+                <table className="w-full min-w-190 table-fixed text-sm">
+                  <colgroup>
+                    <col className="w-[40%]" />
+                    <col className="w-[15%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[10%]" />
+                    <col className="w-[10%]" />
+                    <col className="w-[13%]" />
+                  </colgroup>
                   <thead>
                     <tr className="table-head">
                       <th className="px-4 py-3 font-medium">Name</th>
                       <th className="px-4 py-3 font-medium">Variants</th>
-                      <th className="px-4 py-3 text-right font-medium">Price</th>
-                      <th className="px-4 py-3 text-right font-medium">Stock</th>
+                      <th className="px-4 py-3 font-medium">Price</th>
+                      <th className="px-4 py-3 font-medium">Stock</th>
                       <th className="px-4 py-3 font-medium">Active</th>
-                      <th className="px-4 py-3 text-right font-medium">Actions</th>
+                      <th className="px-4 py-3 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -82,12 +90,12 @@ export default async function AdminProductsPage() {
                         <td className="px-4 py-3 text-muted-foreground">
                           {p.hasVariants ? `${p.variants.length} sizes` : "Simple"}
                         </td>
-                        <td className="px-4 py-3 text-right font-medium tabular-nums">
+                        <td className="px-4 py-3 font-medium tabular-nums">
                           {p.priceFrom === p.priceTo
                             ? `$${p.priceFrom}`
                             : `$${p.priceFrom}–${p.priceTo}`}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                        <td className="px-4 py-3 tabular-nums text-muted-foreground">
                           {p.totalStock}
                         </td>
                         <td className="px-4 py-3">
@@ -95,7 +103,7 @@ export default async function AdminProductsPage() {
                             {p.isActive ? "On" : "Off"}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right text-sm">
+                        <td className="px-4 py-3 text-sm">
                           <Link
                             href={`/admin/products/${p.id}/edit`}
                             className="font-semibold text-primary hover:underline"

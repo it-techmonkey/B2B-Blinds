@@ -6,7 +6,7 @@ import { apiJson } from "@/lib/api-client";
 
 type Category = { id: string; name: string };
 
-type VariantRow = { size: string; price: string; stock: string; unit: "PIECE" | "METER" };
+type VariantRow = { size: string; price: string; stock: string; unit: "PIECE" | "METER" | "BOX" | "ROLL" };
 
 const emptyVariant = (): VariantRow => ({ size: "", price: "", stock: "0", unit: "PIECE" });
 
@@ -217,10 +217,12 @@ export function ProductCreateForm() {
                   <select
                     className="input-field-sm mt-1 w-full"
                     value={row.unit}
-                    onChange={(e) => updateVariant(i, { unit: e.target.value as "PIECE" | "METER" })}
+                    onChange={(e) => updateVariant(i, { unit: e.target.value as "PIECE" | "METER" | "BOX" | "ROLL" })}
                   >
                     <option value="PIECE">piece</option>
                     <option value="METER">meter</option>
+                    <option value="BOX">box</option>
+                    <option value="ROLL">roll</option>
                   </select>
                 </div>
                 <div className="sm:col-span-1 sm:text-right">

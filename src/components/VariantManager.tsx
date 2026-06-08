@@ -1,55 +1,114 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { apiJson } from "@/lib/api-client";
+
+type UnitType = "PIECE" | "METER" | "BOX" | "ROLL";
 
 type Variant = {
   id: string;
   size: string;
   price: string;
   stock: number;
-  unit: "PIECE" | "METER";
+  unit: UnitType;
 };
+
+function sizeToSortOrder(size: string): number {
+  const m = size.match(/^(\d+(?:\.\d+)?)/);
+  return m ? parseFloat(m[1]) : 9999;
+}
+
+function sortedVariants(variants: Variant[]): Variant[] {
+  return [...variants].sort((a, b) => {
+    const na = sizeToSortOrder(a.size);
+    const nb = sizeToSortOrder(b.size);
+    if (na !== nb) return na - nb;
+    return a.size.localeCompare(b.size, undefined, { numeric: true });
+  });
+}
+
+type RowDraft = {
+  size: string;
+  price: string;
+  stock: string;
+  unit: UnitType;
+};
+
+function isDirty(v: Variant, d: RowDraft) {
+  return d.size !== v.size || d.price !== String(v.price) || d.stock !== String(v.stock) || d.unit !== v.unit;
+}
 
 export function VariantManager({ productId, initial }: { productId: string; initial: Variant[] }) {
   const router = useRouter();
-  const [variants, setVariants] = useState(initial);
+  const [variants, setVariants] = useState(() => sortedVariants(initial));
+  const [drafts, setDrafts] = useState<Record<string, RowDraft>>(() =>
+    Object.fromEntries(
+      initial.map((v) => [v.id, { size: v.size, price: String(v.price), stock: String(v.stock), unit: v.unit }])
+    )
+  );
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [newRow, setNewRow] = useState<{ size: string; price: string; stock: string; unit: "PIECE" | "METER" }>({
-    size: "",
-    price: "",
-    stock: "0",
-    unit: "PIECE",
-  });
+  const [savingAll, setSavingAll] = useState(false);
+  const [newRow, setNewRow] = useState<RowDraft>({ size: "", price: "", stock: "0", unit: "PIECE" });
 
   async function refresh() {
     const res = await apiJson<{ product: { variants: Variant[] } }>(`/api/products/${productId}`);
-    setVariants(
+    const fresh = sortedVariants(
       res.product.variants.map((v) => ({
         ...v,
         price: typeof v.price === "string" ? v.price : String(v.price),
       }))
     );
+    setVariants(fresh);
+    setDrafts(
+      Object.fromEntries(
+        fresh.map((v) => [v.id, { size: v.size, price: String(v.price), stock: String(v.stock), unit: v.unit }])
+      )
+    );
     router.refresh();
   }
 
-  async function saveRow(v: Variant) {
+  const updateDraft = useCallback((id: string, patch: Partial<RowDraft>) => {
+    setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+    setSaved((prev) => ({ ...prev, [id]: false }));
+  }, []);
+
+  async function saveOne(v: Variant) {
+    const draft = drafts[v.id];
     setError(null);
+    setSaving((prev) => ({ ...prev, [v.id]: true }));
     try {
       await apiJson(`/api/products/${productId}/variants/${v.id}`, {
         method: "PUT",
         body: JSON.stringify({
-          size: v.size,
-          price: Number(v.price),
-          stock: v.stock,
-          unit: v.unit,
+          size: draft.size,
+          price: Number(draft.price),
+          stock: Number(draft.stock),
+          unit: draft.unit,
         }),
       });
+      setSaved((prev) => ({ ...prev, [v.id]: true }));
+      setTimeout(() => setSaved((prev) => ({ ...prev, [v.id]: false })), 2000);
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setSaving((prev) => ({ ...prev, [v.id]: false }));
+    }
+  }
+
+  async function saveAll() {
+    const dirty = variants.filter((v) => isDirty(v, drafts[v.id]));
+    if (dirty.length === 0) return;
+    setError(null);
+    setSavingAll(true);
+    try {
+      await Promise.all(dirty.map((v) => saveOne(v)));
+    } finally {
+      setSavingAll(false);
     }
   }
 
@@ -100,21 +159,42 @@ export function VariantManager({ productId, initial }: { productId: string; init
     }
   }
 
+  const dirtyCount = variants.filter((v) => drafts[v.id] && isDirty(v, drafts[v.id])).length;
+
   return (
     <div className="space-y-4 sm:max-w-5xl">
-      <div>
-        <p className="section-kicker">Variant maintenance</p>
-        <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-foreground">Update sellable rows and inventory</h2>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="section-kicker">Variant maintenance</p>
+          <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-foreground">Update sellable rows and inventory</h2>
+        </div>
+        {dirtyCount > 0 && (
+          <button
+            type="button"
+            onClick={saveAll}
+            disabled={savingAll}
+            className="btn-primary mt-2 shrink-0 text-xs"
+          >
+            {savingAll ? "Saving…" : `Save all (${dirtyCount})`}
+          </button>
+        )}
       </div>
       {error ? <p className="alert-error">{error}</p> : null}
 
       <div className="table-shell overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
+          <colgroup>
+            <col className="w-[35%]" />
+            <col className="w-[15%]" />
+            <col className="w-[12%]" />
+            <col className="w-[15%]" />
+            <col className="w-[23%]" />
+          </colgroup>
           <thead>
             <tr className="table-head">
               <th className="px-3 py-2.5 font-medium">Size</th>
-              <th className="px-3 py-2.5 text-right font-medium">Price</th>
-              <th className="px-3 py-2.5 text-right font-medium">Stock</th>
+              <th className="px-3 py-2.5 font-medium">Price</th>
+              <th className="px-3 py-2.5 font-medium">Stock</th>
               <th className="px-3 py-2.5 font-medium">Unit</th>
               <th className="px-3 py-2.5 text-right font-medium" />
             </tr>
@@ -124,7 +204,12 @@ export function VariantManager({ productId, initial }: { productId: string; init
               <VariantRowEditor
                 key={v.id}
                 v={v}
-                onSave={saveRow}
+                draft={drafts[v.id] ?? { size: v.size, price: String(v.price), stock: String(v.stock), unit: v.unit }}
+                isSaved={!!saved[v.id]}
+                isSaving={!!saving[v.id]}
+                isDirty={drafts[v.id] ? isDirty(v, drafts[v.id]) : false}
+                onChange={(patch) => updateDraft(v.id, patch)}
+                onSave={() => saveOne(v)}
                 onDelete={() => removeRow(v.id)}
                 onAddStock={addStockArrival}
               />
@@ -139,7 +224,7 @@ export function VariantManager({ productId, initial }: { productId: string; init
           <input
             required
             placeholder="Size"
-            className="input-field-sm min-w-[6rem] flex-1"
+            className="input-field-sm min-w-24 flex-1"
             value={newRow.size}
             onChange={(e) => setNewRow((r) => ({ ...r, size: e.target.value }))}
           />
@@ -164,10 +249,12 @@ export function VariantManager({ productId, initial }: { productId: string; init
           <select
             className="input-field-sm w-full"
             value={newRow.unit}
-            onChange={(e) => setNewRow((r) => ({ ...r, unit: e.target.value as "PIECE" | "METER" }))}
+            onChange={(e) => setNewRow((r) => ({ ...r, unit: e.target.value as UnitType }))}
           >
             <option value="PIECE">piece</option>
             <option value="METER">meter</option>
+            <option value="BOX">box</option>
+            <option value="ROLL">roll</option>
           </select>
           <button type="submit" disabled={adding} className="btn-primary h-9 text-xs">
             Add
@@ -180,19 +267,25 @@ export function VariantManager({ productId, initial }: { productId: string; init
 
 function VariantRowEditor({
   v,
+  draft,
+  isSaved,
+  isSaving,
+  isDirty,
+  onChange,
   onSave,
   onDelete,
   onAddStock,
 }: {
   v: Variant;
-  onSave: (v: Variant) => void;
+  draft: RowDraft;
+  isSaved: boolean;
+  isSaving: boolean;
+  isDirty: boolean;
+  onChange: (patch: Partial<RowDraft>) => void;
+  onSave: () => void;
   onDelete: () => void;
   onAddStock: (variantId: string, qty: number, costPerUnit: number) => void;
 }) {
-  const [size, setSize] = useState(v.size);
-  const [price, setPrice] = useState(typeof v.price === "string" ? v.price : String(v.price));
-  const [stock, setStock] = useState(String(v.stock));
-  const [unit, setUnit] = useState<"PIECE" | "METER">(v.unit);
   const [showArrival, setShowArrival] = useState(false);
   const [arrivalQty, setArrivalQty] = useState("");
   const [arrivalCost, setArrivalCost] = useState("");
@@ -215,44 +308,51 @@ function VariantRowEditor({
     <>
       <tr className="table-row">
         <td className="px-3 py-2">
-          <input className="input-field-sm w-full" value={size} onChange={(e) => setSize(e.target.value)} />
+          <input className="input-field-sm w-full" value={draft.size} onChange={(e) => onChange({ size: e.target.value })} />
         </td>
-        <td className="px-3 py-2 text-right">
+        <td className="px-3 py-2">
           <input
             type="number"
             step="0.01"
-            className="input-field-sm w-24 text-right"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            className="input-field-sm w-full"
+            value={draft.price}
+            onChange={(e) => onChange({ price: e.target.value })}
           />
         </td>
-        <td className="px-3 py-2 text-right">
+        <td className="px-3 py-2">
           <input
             type="number"
             min={0}
-            className="input-field-sm w-20 text-right"
-            value={stock}
-            onChange={(e) => setStock(e.target.value)}
+            className="input-field-sm w-full"
+            value={draft.stock}
+            onChange={(e) => onChange({ stock: e.target.value })}
           />
         </td>
         <td className="px-3 py-2">
           <select
             className="input-field-sm w-full min-w-20"
-            value={unit}
-            onChange={(e) => setUnit(e.target.value as "PIECE" | "METER")}
+            value={draft.unit}
+            onChange={(e) => onChange({ unit: e.target.value as UnitType })}
           >
             <option value="PIECE">piece</option>
             <option value="METER">meter</option>
+            <option value="BOX">box</option>
+            <option value="ROLL">roll</option>
           </select>
         </td>
-        <td className="px-3 py-2 text-right text-xs">
-          <button
-            type="button"
-            className="font-medium text-primary hover:underline"
-            onClick={() => onSave({ ...v, size, price, stock: Number(stock), unit })}
-          >
-            Save
-          </button>
+        <td className="px-3 py-2 text-xs">
+          {isSaved ? (
+            <span className="font-medium text-green-600">Saved ✓</span>
+          ) : (
+            <button
+              type="button"
+              disabled={isSaving || !isDirty}
+              className="font-medium text-primary hover:underline disabled:cursor-default disabled:opacity-40"
+              onClick={onSave}
+            >
+              {isSaving ? "Saving…" : "Save"}
+            </button>
+          )}
           <span className="mx-1.5 text-muted-foreground">·</span>
           <button
             type="button"

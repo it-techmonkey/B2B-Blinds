@@ -23,6 +23,8 @@ enum OrderStatus {
 enum VariantUnit {
   PIECE
   METER
+  BOX
+  ROLL
 }
 
 model User {
@@ -80,6 +82,7 @@ model ProductVariant {
   price     Decimal     @db.Decimal(12, 2)
   stock     Int         @default(0)
   unit      VariantUnit
+  sortOrder Int         @default(0) @map("sort_order")
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
 
