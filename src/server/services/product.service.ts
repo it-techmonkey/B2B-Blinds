@@ -74,8 +74,7 @@ export function serializeProductListRow(
   };
 }
 
-export async function listProductsForClient(page: number, limit: number, userId: string, categoryName?: string) {
-  const skip = (page - 1) * limit;
+export async function listProductsForClient(userId: string, categoryName?: string) {
   const where: Prisma.ProductWhereInput = {
     isActive: true,
     ...(categoryName
@@ -131,7 +130,7 @@ export async function listProductsForClient(page: number, limit: number, userId:
 
   return {
     data,
-    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    pagination: { page: 1, limit: total, total, totalPages: 1 },
   };
 }
 

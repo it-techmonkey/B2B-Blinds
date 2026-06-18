@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       return jsonOk(result);
     }
     if (auth?.role === "CUSTOMER") {
-      const result = await listProductsForClient(page, limit, auth.sub, categoryName);
+      const result = await listProductsForClient(auth.sub, categoryName);
       return jsonOk(result);
     }
     const result = await listProductsPublic(page, limit, categoryName);

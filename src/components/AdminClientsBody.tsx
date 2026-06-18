@@ -427,7 +427,7 @@ function PricingModal({
     <Modal title={`Pricing — ${client.name}`} onClose={onClose} wide>
       <p className="text-sm text-muted-foreground">
         Configure pricing for <span className="font-medium text-foreground">{client.email}</span>. Per-variant prices
-        override the global discount. Disabled products won't appear in the client's catalog.
+        override the global discount. Disabled products will not appear in the client&apos;s catalog.
       </p>
 
       <PricingFields
