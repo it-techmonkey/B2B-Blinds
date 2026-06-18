@@ -20,6 +20,35 @@ export async function createOrder(items: OrderLineInput[], customer: OrderCustom
   });
   const productById = new Map(products.map((p) => [p.id, p]));
 
+  // Load client pricing if authenticated
+  let clientDiscount: Prisma.Decimal | null = null;
+  const clientOverrideMap = new Map<string, Prisma.Decimal>(); // variantId → price
+  if (userId) {
+    const clientUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        pricingDiscount: true,
+        priceOverrides: { select: { variantId: true, price: true } },
+      },
+    });
+    if (clientUser) {
+      clientDiscount = clientUser.pricingDiscount;
+      for (const o of clientUser.priceOverrides) {
+        clientOverrideMap.set(o.variantId, o.price);
+      }
+    }
+  }
+
+  function resolvePrice(listPrice: Prisma.Decimal, variantId: string): Prisma.Decimal {
+    const override = clientOverrideMap.get(variantId);
+    if (override) return override;
+    if (clientDiscount && clientDiscount.gt(0)) {
+      const multiplier = new Prisma.Decimal(1).sub(clientDiscount.div(100));
+      return listPrice.mul(multiplier).toDecimalPlaces(2);
+    }
+    return listPrice;
+  }
+
   let totalAmount = new Prisma.Decimal(0);
   const lineCreates: {
     productId: string;
@@ -55,14 +84,15 @@ export async function createOrder(items: OrderLineInput[], customer: OrderCustom
       throw new AppError(`Insufficient stock for "${product.name}" (${variant.size})`, 409, "INSUFFICIENT_STOCK");
     }
 
-    const lineTotal = variant.price.mul(line.quantity);
+    const effectivePrice = resolvePrice(variant.price, variant.id);
+    const lineTotal = effectivePrice.mul(line.quantity);
     totalAmount = totalAmount.add(lineTotal);
     lineCreates.push({
       productId: product.id,
       variantId: variant.id,
       productName: product.name,
       sizeSnapshot: variant.size,
-      price: variant.price,
+      price: effectivePrice,
       quantity: line.quantity,
       total: lineTotal,
     });

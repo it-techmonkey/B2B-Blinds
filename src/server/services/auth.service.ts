@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { UserRole, UserStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { signToken } from "@/lib/auth/jwt";
@@ -16,7 +16,12 @@ export async function loginUser(email: string, password: string) {
   if (!ok) {
     throw new UnauthorizedError("Invalid email or password");
   }
-  if (user.role === UserRole.CUSTOMER && !user.approved) {
+  if (user.role === UserRole.CUSTOMER && user.status !== UserStatus.APPROVED) {
+    if (user.status === UserStatus.REJECTED) {
+      throw new UnauthorizedError(
+        "Your account registration was not approved. Please contact Hyde Park Wood Ltd for assistance."
+      );
+    }
     throw new UnauthorizedError(
       "Your account is pending approval. Please wait for Hyde Park Wood Ltd to activate your login."
     );
@@ -43,9 +48,10 @@ export async function registerCustomer(name: string, email: string, password: st
         email: normalized,
         passwordHash,
         role: UserRole.CUSTOMER,
+        status: UserStatus.PENDING,
         approved: false,
       },
-      select: { id: true, name: true, email: true, role: true, approved: true },
+      select: { id: true, name: true, email: true, role: true, status: true, approved: true },
     });
     return { token: null as string | null, user, pendingApproval: true };
   } catch (e: unknown) {

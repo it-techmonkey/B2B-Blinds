@@ -3,6 +3,7 @@ import { paginationSchema, productCreateBaseSchema, resolveProductCreateVariants
 import {
   listProductsAdmin,
   listProductsPublic,
+  listProductsForClient,
   createProduct,
   serializeProductListRow,
 } from "@/server/services/product.service";
@@ -25,6 +26,10 @@ export async function GET(request: NextRequest) {
       const result = categoryName
         ? await listProductsPublic(page, limit, categoryName)
         : await listProductsAdmin(page, limit);
+      return jsonOk(result);
+    }
+    if (auth?.role === "CUSTOMER") {
+      const result = await listProductsForClient(page, limit, auth.sub, categoryName);
       return jsonOk(result);
     }
     const result = await listProductsPublic(page, limit, categoryName);

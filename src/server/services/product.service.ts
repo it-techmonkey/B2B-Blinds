@@ -74,6 +74,67 @@ export function serializeProductListRow(
   };
 }
 
+export async function listProductsForClient(page: number, limit: number, userId: string, categoryName?: string) {
+  const skip = (page - 1) * limit;
+  const where: Prisma.ProductWhereInput = {
+    isActive: true,
+    ...(categoryName
+      ? { category: { name: { equals: categoryName, mode: "insensitive" as const } } }
+      : {}),
+  };
+
+  const [allItems, clientUser] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      orderBy: { name: "asc" },
+      include: { category: true, variants: variantInclude },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        pricingDiscount: true,
+        priceOverrides: { select: { variantId: true, price: true } },
+        productBlocks: { select: { productId: true } },
+      },
+    }),
+  ]);
+
+  const blockedIds = new Set((clientUser?.productBlocks ?? []).map((b) => b.productId));
+  const items = allItems.filter((p) => !blockedIds.has(p.id));
+  const total = items.length;
+
+  const overrideMap = new Map<string, Prisma.Decimal>();
+  const discount = clientUser?.pricingDiscount ?? null;
+  for (const o of clientUser?.priceOverrides ?? []) {
+    overrideMap.set(o.variantId, o.price);
+  }
+
+  function clientPrice(listPrice: Prisma.Decimal, variantId: string): string {
+    const override = overrideMap.get(variantId);
+    if (override) return override.toFixed(2);
+    if (discount && discount.gt(0)) {
+      return listPrice.mul(new Prisma.Decimal(1).sub(discount.div(100))).toDecimalPlaces(2).toFixed(2);
+    }
+    return listPrice.toFixed(2);
+  }
+
+  const data = items.map((p) => {
+    const base = serializeProductListRow(p);
+    return {
+      ...base,
+      variants: base.variants.map((v, idx) => ({
+        ...v,
+        price: clientPrice(p.variants[idx]!.price, v.id),
+      })),
+    };
+  });
+
+  return {
+    data,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
+}
+
 export async function listProductsPublic(page: number, limit: number, categoryName?: string) {
   const skip = (page - 1) * limit;
   const where: Prisma.ProductWhereInput = {
