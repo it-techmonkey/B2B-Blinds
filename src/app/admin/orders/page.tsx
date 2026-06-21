@@ -92,7 +92,7 @@ export default async function AdminOrdersPage({
                     <td className="px-3 py-3 font-semibold text-foreground">{s.customerName}</td>
                     <td className="px-3 py-3 font-mono text-xs text-muted-foreground">
                       <Link href={`/admin/orders/${s.id}`} className="hover:text-foreground hover:underline">
-                        {s.id.slice(0, 8)}
+                        {s.referenceNumber}
                       </Link>
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">{new Date(s.createdAt).toLocaleDateString()}</td>

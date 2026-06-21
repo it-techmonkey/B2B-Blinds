@@ -20,6 +20,7 @@ export function CheckoutClient({ isCustomer }: { isCustomer: boolean }) {
   const [lines, setLines] = useState<CartLineMeta[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+  const [placedRefNumber, setPlacedRefNumber] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmStep, setConfirmStep] = useState(false);
   const [invoiceAccessToken, setInvoiceAccessToken] = useState<string | null>(null);
@@ -86,7 +87,7 @@ export function CheckoutClient({ isCustomer }: { isCustomer: boolean }) {
         if (vid) row.variantId = vid;
         return row;
       });
-      const res = await apiJson<{ order: { id: string }; invoiceAccessToken?: string }>("/api/orders", {
+      const res = await apiJson<{ order: { id: string; referenceNumber: string }; invoiceAccessToken?: string }>("/api/orders", {
         method: "POST",
         body: JSON.stringify({
           items,
@@ -102,6 +103,7 @@ export function CheckoutClient({ isCustomer }: { isCustomer: boolean }) {
       });
       clearCartPayload();
       setPlacedOrderId(res.order.id);
+      setPlacedRefNumber(res.order.referenceNumber ?? null);
       setInvoiceAccessToken(res.invoiceAccessToken ?? null);
       setLines([]);
       setConfirmStep(false);
@@ -117,7 +119,7 @@ export function CheckoutClient({ isCustomer }: { isCustomer: boolean }) {
       <div className="card-dashboard p-8 text-center sm:p-10">
         <p className="mt-3 text-2xl font-semibold tracking-[-0.05em] text-foreground">Order placed</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Reference ID: <span className="font-mono">{placedOrderId}</span>
+          Reference: <span className="font-mono font-semibold text-foreground">{placedRefNumber ?? placedOrderId}</span>
         </p>
         <div className="mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
           <InvoicePdfLink orderId={placedOrderId} accessToken={invoiceAccessToken ?? undefined} variant="button">

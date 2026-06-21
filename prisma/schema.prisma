@@ -135,19 +135,20 @@ model ProductVariant {
 }
 
 model Order {
-  id          String      @id @default(cuid())
-  userId      String?     @map("user_id")
-  user        User?       @relation(fields: [userId], references: [id])
-  status      OrderStatus @default(CREATED)
-  totalAmount Decimal     @map("total_amount") @db.Decimal(12, 2)
+  id              String      @id @default(cuid())
+  referenceNumber String      @unique @map("reference_number")
+  userId          String?     @map("user_id")
+  user            User?       @relation(fields: [userId], references: [id])
+  status          OrderStatus @default(CREATED)
+  totalAmount     Decimal     @map("total_amount") @db.Decimal(12, 2)
   customerName         String   @map("customer_name")
   customerBusinessName String   @map("customer_business_name")
   customerEmail        String   @map("customer_email")
   customerPhone        String   @map("customer_phone")
   customerCity         String   @map("customer_city")
   customerNotes        String?  @map("customer_notes")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
 
   items OrderItem[]
 

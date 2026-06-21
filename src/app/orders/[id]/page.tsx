@@ -42,7 +42,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
           <div>
             <p className="section-kicker">Order detail</p>
             <h1 className="dash-title mt-3">Order reference and line-level pricing.</h1>
-            <p className="mt-3 font-mono text-xs text-muted-foreground">{s.id}</p>
+            <p className="mt-3 font-mono text-xs text-muted-foreground">{s.referenceNumber}</p>
             <p className="mt-2 text-sm text-muted-foreground">{new Date(s.createdAt).toLocaleString()}</p>
             <div className="mt-4">
               <OrderStatusBadge status={s.status} />

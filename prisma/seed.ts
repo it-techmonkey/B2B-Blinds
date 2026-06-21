@@ -329,19 +329,25 @@ async function seedLadderTapes() {
         isActive: true,
         variants: {
           create: [
-            { size: "White — 25mm tape",        price: 0, stock: 0, unit: VariantUnit.PIECE },
-            { size: "White — 38mm tape",        price: 0, stock: 0, unit: VariantUnit.PIECE },
-            { size: "Light Marble — 25mm tape", price: 0, stock: 0, unit: VariantUnit.PIECE },
-            { size: "Light Marble — 38mm tape", price: 0, stock: 0, unit: VariantUnit.PIECE },
-            { size: "Soft Grey — 25mm tape",    price: 0, stock: 0, unit: VariantUnit.PIECE },
-            { size: "Soft Grey — 38mm tape",    price: 0, stock: 0, unit: VariantUnit.PIECE },
-            { size: "Iron Slate — 25mm tape",   price: 0, stock: 0, unit: VariantUnit.PIECE },
-            { size: "Iron Slate — 38mm tape",   price: 0, stock: 0, unit: VariantUnit.PIECE },
+            { size: "White — 25mm tape",        price: 0, stock: IMPORT_STOCK, unit: VariantUnit.PIECE },
+            { size: "White — 38mm tape",        price: 0, stock: IMPORT_STOCK, unit: VariantUnit.PIECE },
+            { size: "Light Marble — 25mm tape", price: 0, stock: IMPORT_STOCK, unit: VariantUnit.PIECE },
+            { size: "Light Marble — 38mm tape", price: 0, stock: IMPORT_STOCK, unit: VariantUnit.PIECE },
+            { size: "Soft Grey — 25mm tape",    price: 0, stock: IMPORT_STOCK, unit: VariantUnit.PIECE },
+            { size: "Soft Grey — 38mm tape",    price: 0, stock: IMPORT_STOCK, unit: VariantUnit.PIECE },
+            { size: "Iron Slate — 25mm tape",   price: 0, stock: IMPORT_STOCK, unit: VariantUnit.PIECE },
+            { size: "Iron Slate — 38mm tape",   price: 0, stock: IMPORT_STOCK, unit: VariantUnit.PIECE },
           ],
         },
       },
     });
     console.log("Ladder Tapes: Ladder Tapes for 50mm Faux Wood (8 variants)");
+  } else {
+    await prisma.productVariant.updateMany({
+      where: { productId: existing.id },
+      data: { stock: IMPORT_STOCK },
+    });
+    console.log("Ladder Tapes: updated stock for existing variants");
   }
 }
 
@@ -368,10 +374,16 @@ async function seedBracketsAndSwatches() {
           categoryId: cat.id,
           hasVariants: false,
           isActive: true,
-          variants: { create: [{ size: item.size, price: 0, stock: 0, unit: VariantUnit.PIECE }] },
+          variants: { create: [{ size: item.size, price: 0, stock: IMPORT_STOCK, unit: VariantUnit.PIECE }] },
         },
       });
       console.log(`Brackets & Swatches: ${item.name}`);
+    } else {
+      await prisma.productVariant.updateMany({
+        where: { productId: existing.id },
+        data: { stock: IMPORT_STOCK },
+      });
+      console.log(`Brackets & Swatches: updated stock for ${item.name}`);
     }
   }
 }
@@ -395,11 +407,17 @@ async function seedToolsAndMachines() {
         hasVariants: false,
         isActive: true,
         variants: {
-          create: [{ size: "3m × 3m", price: 0, stock: 0, unit: VariantUnit.PIECE }],
+          create: [{ size: "3m × 3m", price: 0, stock: IMPORT_STOCK, unit: VariantUnit.PIECE }],
         },
       },
     });
     console.log("Tools & Machines: Inspection Hoist");
+  } else {
+    await prisma.productVariant.updateMany({
+      where: { productId: hoistExisting.id },
+      data: { stock: IMPORT_STOCK },
+    });
+    console.log("Tools & Machines: updated stock for Inspection Hoist");
   }
 }
 
@@ -457,7 +475,7 @@ async function main() {
   console.log(`- Admin: ${adminEmail} / ${adminPassword}`);
   console.log(`- Customer: ${customerEmail} / ${customerPassword}`);
 
-  const categories = ["Blinds", "Shades", "Accessories"];
+  const categories = ["Blinds", "Shades"];
   for (const name of categories) {
     await prisma.category.upsert({
       where: { name },

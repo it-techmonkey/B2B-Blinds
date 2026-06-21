@@ -9,6 +9,7 @@ export function formatDecimal(d: Prisma.Decimal): string {
 export function serializeOrderRow(o: Order) {
   return {
     id: o.id,
+    referenceNumber: o.referenceNumber,
     userId: o.userId,
     customerName: o.customerName,
     customerBusinessName: o.customerBusinessName,
@@ -36,6 +37,7 @@ function dec(d: Prisma.Decimal): string {
 export function serializeOrder(o: OrderWithRelations) {
   return {
     id: o.id,
+    referenceNumber: o.referenceNumber,
     userId: o.userId,
     customerName: o.customerName,
     customerBusinessName: o.customerBusinessName,

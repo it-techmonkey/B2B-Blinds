@@ -73,7 +73,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 const s = serializeOrderRow(o);
                 return (
                   <tr key={s.id} className="table-row">
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">Ref #{s.id.slice(0, 8)}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{s.referenceNumber}</td>
                     <td className="px-4 py-3 text-muted-foreground">{new Date(s.createdAt).toLocaleString()}</td>
                     <td className="px-4 py-3">
                       <OrderStatusBadge status={s.status} />

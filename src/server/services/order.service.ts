@@ -2,6 +2,21 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { AppError, ForbiddenError, NotFoundError } from "@/server/errors";
 
+async function generateReferenceNumber(): Promise<string> {
+  const now = new Date();
+  const datePart =
+    String(now.getFullYear()) +
+    String(now.getMonth() + 1).padStart(2, "0") +
+    String(now.getDate()).padStart(2, "0");
+  const prefix = `ORD-${datePart}-`;
+
+  // Count existing orders with this date prefix to determine sequence
+  const count = await prisma.order.count({
+    where: { referenceNumber: { startsWith: prefix } },
+  });
+  return `${prefix}${String(count + 1).padStart(4, "0")}`;
+}
+
 export type OrderLineInput = { productId: string; variantId?: string; quantity: number };
 export type OrderCustomerInput = {
   name: string;
@@ -104,6 +119,8 @@ export async function createOrder(items: OrderLineInput[], customer: OrderCustom
     });
   }
 
+  const referenceNumber = await generateReferenceNumber();
+
   // Neon serverless: long interactive transactions hit P2028. Keep tx to writes only.
   return prisma.$transaction(
     async (tx) => {
@@ -123,6 +140,7 @@ export async function createOrder(items: OrderLineInput[], customer: OrderCustom
 
       return tx.order.create({
         data: {
+          referenceNumber,
           userId,
           status: "CREATED",
           totalAmount,

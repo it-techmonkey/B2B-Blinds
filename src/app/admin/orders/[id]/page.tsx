@@ -32,7 +32,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
     <DashboardShell role="ADMIN">
       <PageHeader
         kicker="Admin operations"
-        title={`Order #${s.id.slice(0, 8)}`}
+        title={`Order ${s.referenceNumber}`}
         subtitle={`Placed ${new Date(s.createdAt).toLocaleString()}`}
         actions={
           <Link href="/admin/orders" className="btn-secondary w-full lg:w-auto">
