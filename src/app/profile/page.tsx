@@ -95,7 +95,7 @@ export default async function ProfilePage() {
                 <article key={o.id} className="rounded-[16px] border border-border/80 bg-muted/30 p-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="font-mono text-xs text-muted-foreground">Ref #{o.id.slice(0, 8)}</p>
+                      <p className="font-mono text-xs text-muted-foreground">{o.orderNumber}</p>
                       <p className="mt-1 text-sm text-muted-foreground">{new Date(o.createdAt).toLocaleString()}</p>
                     </div>
                     <div className="flex items-center gap-3">

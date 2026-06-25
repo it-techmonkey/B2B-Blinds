@@ -32,7 +32,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
     <DashboardShell role="ADMIN">
       <PageHeader
         kicker="Admin operations"
-        title={`Order ${s.referenceNumber}`}
+        title={`Order ${s.orderNumber}`}
         subtitle={`Placed ${new Date(s.createdAt).toLocaleString()}`}
         actions={
           <Link href="/admin/orders" className="btn-secondary w-full lg:w-auto">
@@ -80,6 +80,11 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           <p className="text-muted-foreground">
             Customer ID: <span className="font-mono text-xs text-foreground">{s.userId ?? "Guest"}</span>
           </p>
+          {s.customerReference ? (
+            <p className="text-muted-foreground sm:col-span-2">
+              Customer ref: <span className="font-medium text-foreground">{s.customerReference}</span>
+            </p>
+          ) : null}
         </div>
         {s.customerNotes ? (
           <div className="mt-4 rounded-[14px] border border-border/80 bg-muted/25 p-3">

@@ -80,6 +80,7 @@ export const createOrderSchema = z.object({
     phone: z.string().trim().min(6).max(40),
     city: z.string().trim().min(1).max(120),
     notes: z.string().trim().max(500).optional().default(""),
+    customerReference: z.string().trim().max(100).optional(),
   }),
 });
 

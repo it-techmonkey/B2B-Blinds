@@ -15,7 +15,14 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function CheckoutClient({ isCustomer }: { isCustomer: boolean }) {
+type InitialCustomer = {
+  name: string;
+  email: string;
+  phone: string;
+  businessName: string;
+};
+
+export function CheckoutClient({ isCustomer, initialCustomer }: { isCustomer: boolean; initialCustomer?: InitialCustomer }) {
   const router = useRouter();
   const [lines, setLines] = useState<CartLineMeta[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -25,12 +32,13 @@ export function CheckoutClient({ isCustomer }: { isCustomer: boolean }) {
   const [confirmStep, setConfirmStep] = useState(false);
   const [invoiceAccessToken, setInvoiceAccessToken] = useState<string | null>(null);
   const [customer, setCustomer] = useState({
-    name: "",
-    businessName: "",
-    email: "",
-    phone: "",
+    name: initialCustomer?.name ?? "",
+    businessName: initialCustomer?.businessName ?? "",
+    email: initialCustomer?.email ?? "",
+    phone: initialCustomer?.phone ?? "",
     city: "",
     notes: "",
+    customerReference: "",
   });
 
   useEffect(() => {
@@ -87,7 +95,7 @@ export function CheckoutClient({ isCustomer }: { isCustomer: boolean }) {
         if (vid) row.variantId = vid;
         return row;
       });
-      const res = await apiJson<{ order: { id: string; referenceNumber: string }; invoiceAccessToken?: string }>("/api/orders", {
+      const res = await apiJson<{ order: { id: string; orderNumber: string }; invoiceAccessToken?: string }>("/api/orders", {
         method: "POST",
         body: JSON.stringify({
           items,
@@ -98,12 +106,13 @@ export function CheckoutClient({ isCustomer }: { isCustomer: boolean }) {
             phone: customer.phone.trim(),
             city: customer.city.trim(),
             notes: customer.notes.trim(),
+            customerReference: customer.customerReference.trim() || undefined,
           },
         }),
       });
       clearCartPayload();
       setPlacedOrderId(res.order.id);
-      setPlacedRefNumber(res.order.referenceNumber ?? null);
+      setPlacedRefNumber(res.order.orderNumber ?? null);
       setInvoiceAccessToken(res.invoiceAccessToken ?? null);
       setLines([]);
       setConfirmStep(false);
@@ -119,7 +128,7 @@ export function CheckoutClient({ isCustomer }: { isCustomer: boolean }) {
       <div className="card-dashboard p-8 text-center sm:p-10">
         <p className="mt-3 text-2xl font-semibold tracking-[-0.05em] text-foreground">Order placed</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Reference: <span className="font-mono font-semibold text-foreground">{placedRefNumber ?? placedOrderId}</span>
+          Order number: <span className="font-mono font-semibold text-foreground">{placedRefNumber ?? placedOrderId}</span>
         </p>
         <div className="mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
           <InvoicePdfLink orderId={placedOrderId} accessToken={invoiceAccessToken ?? undefined} variant="button">
@@ -291,6 +300,18 @@ export function CheckoutClient({ isCustomer }: { isCustomer: boolean }) {
               />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
+              <label htmlFor="co-ref" className="field-label">
+                Your reference / PO number <span className="font-normal text-muted-foreground">(optional)</span>
+              </label>
+              <input
+                id="co-ref"
+                className="input-field"
+                value={customer.customerReference}
+                onChange={(e) => setCustomer((prev) => ({ ...prev, customerReference: e.target.value }))}
+                placeholder="Your internal PO or reference number"
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
               <label htmlFor="co-notes" className="field-label">
                 Order notes <span className="font-normal text-muted-foreground">(optional)</span>
               </label>
@@ -327,6 +348,11 @@ export function CheckoutClient({ isCustomer }: { isCustomer: boolean }) {
             <div className="sm:col-span-2">
               <DetailRow label="City" value={customer.city} />
             </div>
+            {customer.customerReference.trim() ? (
+              <div className="sm:col-span-2">
+                <DetailRow label="Your reference" value={customer.customerReference} />
+              </div>
+            ) : null}
           </div>
 
           {customer.notes.trim() ? (

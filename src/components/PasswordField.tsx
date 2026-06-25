@@ -27,9 +27,7 @@ export function PasswordField({
 
   return (
     <div>
-      <label className="field-label" htmlFor={id}>
-        {label}
-      </label>
+      {label ? <label className="field-label" htmlFor={id}>{label}</label> : null}
       <div className="relative mt-1.5">
         <input
           id={id}

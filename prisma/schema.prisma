@@ -49,6 +49,8 @@ model User {
   phone       String?
   invoiceAddress  String? @map("invoice_address") @db.Text
   deliveryAddress String? @map("delivery_address") @db.Text
+  passwordResetToken       String?   @unique @map("password_reset_token")
+  passwordResetTokenExpiry DateTime? @map("password_reset_token_expiry")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -136,7 +138,8 @@ model ProductVariant {
 
 model Order {
   id              String      @id @default(cuid())
-  referenceNumber String      @unique @map("reference_number")
+  orderNumber     String      @unique @map("order_number")
+  customerReference String?   @map("customer_reference")
   userId          String?     @map("user_id")
   user            User?       @relation(fields: [userId], references: [id])
   status          OrderStatus @default(CREATED)

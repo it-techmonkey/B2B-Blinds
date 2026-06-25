@@ -8,6 +8,17 @@ import { listAllOrders } from "@/server/services/order.service";
 import { serializeOrder } from "@/server/serialize";
 import { redirect } from "next/navigation";
 
+function dateLabel(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const fmt = (dt: Date) => dt.toDateString();
+  if (fmt(d) === fmt(today)) return "Today";
+  if (fmt(d) === fmt(yesterday)) return "Yesterday";
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+}
+
 export default async function AdminOrdersPage({
   searchParams,
 }: {
@@ -64,60 +75,82 @@ export default async function AdminOrdersPage({
             <p className="mt-1 text-xl font-semibold tracking-[-0.04em] text-foreground">No orders to review</p>
             <p className="mt-2 text-sm text-muted-foreground">Incoming customer orders will appear here.</p>
           </div>
-        ) : (
-          <div className="table-shell overflow-x-auto">
-            <table className="w-full min-w-[980px] text-sm">
-            <thead>
-              <tr className="table-head">
-                <th className="px-3 py-3 font-medium">Name</th>
-                <th className="px-3 py-3 font-medium">Ref #</th>
-                <th className="px-3 py-3 font-medium">Placed</th>
-                <th className="px-3 py-3 font-medium">Items</th>
-                <th className="px-3 py-3 text-right font-medium">Total</th>
-                <th className="px-3 py-3 font-medium">Status</th>
-                <th className="px-3 py-3 text-right font-medium">View</th>
-                <th className="px-3 py-3 text-right font-medium">PDF Invoice</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((o) => {
-                const s = serializeOrder(o);
-                const preview =
-                  s.items.length <= 2
-                    ? s.items.map((i) => i.productName).join(", ")
-                    : `${s.items[0]?.productName ?? ""} +${s.items.length - 1}`;
-
-                return (
-                  <tr key={s.id} className="table-row">
-                    <td className="px-3 py-3 font-semibold text-foreground">{s.customerName}</td>
-                    <td className="px-3 py-3 font-mono text-xs text-muted-foreground">
-                      <Link href={`/admin/orders/${s.id}`} className="hover:text-foreground hover:underline">
-                        {s.referenceNumber}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">{new Date(s.createdAt).toLocaleDateString()}</td>
-                    <td className="max-w-[220px] px-3 py-3 text-muted-foreground" title={s.items.map((i) => i.productName).join(", ")}>
-                      <span className="line-clamp-2">{preview}</span>
-                    </td>
-                    <td className="px-3 py-3 text-right font-semibold tabular-nums">${s.totalAmount}</td>
-                    <td className="px-3 py-3">
-                      <OrderStatusSelect orderId={s.id} current={s.status} compact />
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <Link href={`/admin/orders/${s.id}`} className="text-xs font-semibold text-primary hover:underline">
-                        View
-                      </Link>
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <InvoicePdfLink orderId={s.id} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            </table>
-          </div>
-        )}
+        ) : (() => {
+          const rows = data.map(serializeOrder);
+          const groups: { label: string; orders: typeof rows }[] = [];
+          for (const o of rows) {
+            const label = dateLabel(o.createdAt);
+            const last = groups[groups.length - 1];
+            if (last && last.label === label) {
+              last.orders.push(o);
+            } else {
+              groups.push({ label, orders: [o] });
+            }
+          }
+          return (
+            <div className="space-y-6">
+              {groups.map((group) => (
+                <div key={group.label} className="space-y-2">
+                  <p className="px-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">{group.label}</p>
+                  <div className="table-shell overflow-x-auto">
+                    <table className="w-full min-w-[980px] text-sm">
+                      <thead>
+                        <tr className="table-head">
+                          <th className="px-3 py-3 font-medium">Name</th>
+                          <th className="px-3 py-3 font-medium">Order #</th>
+                          <th className="px-3 py-3 font-medium">Your Ref</th>
+                          <th className="px-3 py-3 font-medium">Time</th>
+                          <th className="px-3 py-3 font-medium">Items</th>
+                          <th className="px-3 py-3 text-right font-medium">Total</th>
+                          <th className="px-3 py-3 font-medium">Status</th>
+                          <th className="px-3 py-3 text-right font-medium">View</th>
+                          <th className="px-3 py-3 text-right font-medium">PDF</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.orders.map((s) => {
+                          const preview =
+                            s.items.length <= 2
+                              ? s.items.map((i) => i.productName).join(", ")
+                              : `${s.items[0]?.productName ?? ""} +${s.items.length - 1}`;
+                          return (
+                            <tr key={s.id} className="table-row">
+                              <td className="px-3 py-3 font-semibold text-foreground">{s.customerName}</td>
+                              <td className="px-3 py-3 font-mono text-xs text-muted-foreground">
+                                <Link href={`/admin/orders/${s.id}`} className="hover:text-foreground hover:underline">
+                                  {s.orderNumber}
+                                </Link>
+                              </td>
+                              <td className="px-3 py-3 text-xs text-muted-foreground">{s.customerReference ?? "—"}</td>
+                              <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">
+                                {new Date(s.createdAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                              </td>
+                              <td className="max-w-[220px] px-3 py-3 text-muted-foreground" title={s.items.map((i) => i.productName).join(", ")}>
+                                <span className="line-clamp-2">{preview}</span>
+                              </td>
+                              <td className="px-3 py-3 text-right font-semibold tabular-nums">${s.totalAmount}</td>
+                              <td className="px-3 py-3">
+                                <OrderStatusSelect orderId={s.id} current={s.status} compact />
+                              </td>
+                              <td className="px-3 py-3 text-right">
+                                <Link href={`/admin/orders/${s.id}`} className="text-xs font-semibold text-primary hover:underline">
+                                  View
+                                </Link>
+                              </td>
+                              <td className="px-3 py-3 text-right">
+                                <InvoicePdfLink orderId={s.id} />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {pagination.totalPages > 1 ? (
           <nav className="flex items-center justify-center gap-2" aria-label="Pagination">
