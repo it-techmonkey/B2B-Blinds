@@ -2,15 +2,17 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { AppError, ForbiddenError, NotFoundError } from "@/server/errors";
 
-async function generateOrderNumber(): Promise<string> {
+function orderNumberPrefix(): string {
   const now = new Date();
   const datePart =
     String(now.getFullYear()) +
     String(now.getMonth() + 1).padStart(2, "0") +
     String(now.getDate()).padStart(2, "0");
-  const prefix = `ORD-${datePart}-`;
+  return `ORD-${datePart}-`;
+}
 
-  const count = await prisma.order.count({
+async function nextOrderNumber(tx: Prisma.TransactionClient, prefix: string): Promise<string> {
+  const count = await tx.order.count({
     where: { orderNumber: { startsWith: prefix } },
   });
   return `${prefix}${String(count + 1).padStart(4, "0")}`;
@@ -119,55 +121,72 @@ export async function createOrder(items: OrderLineInput[], customer: OrderCustom
     });
   }
 
-  const orderNumber = await generateOrderNumber();
+  const prefix = orderNumberPrefix();
 
   // Neon serverless: long interactive transactions hit P2028. Keep tx to writes only.
-  return prisma.$transaction(
-    async (tx) => {
-      for (const d of stockDecrements) {
-        const updated = await tx.productVariant.updateMany({
-          where: {
-            id: d.variantId,
-            productId: d.productId,
-            stock: { gte: d.quantity },
-          },
-          data: { stock: { decrement: d.quantity } },
-        });
-        if (updated.count !== 1) {
-          throw new AppError(`Insufficient stock for "${d.label}"`, 409, "INSUFFICIENT_STOCK");
-        }
-      }
+  // orderNumber is computed inside the tx and retried on collision since concurrent
+  // checkouts can otherwise race to the same count-derived number (unique constraint).
+  const MAX_ATTEMPTS = 5;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      return await prisma.$transaction(
+        async (tx) => {
+          for (const d of stockDecrements) {
+            const updated = await tx.productVariant.updateMany({
+              where: {
+                id: d.variantId,
+                productId: d.productId,
+                stock: { gte: d.quantity },
+              },
+              data: { stock: { decrement: d.quantity } },
+            });
+            if (updated.count !== 1) {
+              throw new AppError(`Insufficient stock for "${d.label}"`, 409, "INSUFFICIENT_STOCK");
+            }
+          }
 
-      return tx.order.create({
-        data: {
-          orderNumber,
-          customerReference: customer.customerReference?.trim() || null,
-          userId,
-          status: "CREATED",
-          totalAmount,
-          customerName: customer.name,
-          customerBusinessName: customer.businessName,
-          customerEmail: customer.email,
-          customerPhone: customer.phone,
-          customerCity: customer.city,
-          customerNotes: customer.notes?.trim() || null,
-          items: {
-            create: lineCreates.map((l) => ({
-              productId: l.productId,
-              variantId: l.variantId,
-              productName: l.productName,
-              sizeSnapshot: l.sizeSnapshot,
-              price: l.price,
-              quantity: l.quantity,
-              total: l.total,
-            })),
-          },
+          const orderNumber = await nextOrderNumber(tx, prefix);
+
+          return tx.order.create({
+            data: {
+              orderNumber,
+              customerReference: customer.customerReference?.trim() || null,
+              userId,
+              status: "CREATED",
+              totalAmount,
+              customerName: customer.name,
+              customerBusinessName: customer.businessName,
+              customerEmail: customer.email,
+              customerPhone: customer.phone,
+              customerCity: customer.city,
+              customerNotes: customer.notes?.trim() || null,
+              items: {
+                create: lineCreates.map((l) => ({
+                  productId: l.productId,
+                  variantId: l.variantId,
+                  productName: l.productName,
+                  sizeSnapshot: l.sizeSnapshot,
+                  price: l.price,
+                  quantity: l.quantity,
+                  total: l.total,
+                })),
+              },
+            },
+            include: { items: { include: { product: { select: { id: true, name: true } } } } },
+          });
         },
-        include: { items: { include: { product: { select: { id: true, name: true } } } } },
-      });
-    },
-    { maxWait: 10_000, timeout: 15_000 }
-  );
+        { maxWait: 10_000, timeout: 15_000 }
+      );
+    } catch (e) {
+      const isOrderNumberCollision =
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === "P2002" &&
+        (e.meta?.target as string[] | undefined)?.includes("order_number");
+      if (isOrderNumberCollision && attempt < MAX_ATTEMPTS) continue;
+      throw e;
+    }
+  }
+  throw new AppError("Could not generate a unique order number, please try again", 409, "ORDER_NUMBER_CONFLICT");
 }
 
 export async function getOrderById(orderId: string, requesterId: string, isAdmin: boolean) {

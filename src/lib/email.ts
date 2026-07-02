@@ -4,7 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   const { data, error } = await resend.emails.send({
-    from: "Hyde Park Wood <onboarding@resend.dev>",
+    from: "Hyde Park Wood <noreply@hydeparkwood.co.uk>",
     to,
     subject: "Reset your password — Hyde Park Wood",
     html: `
