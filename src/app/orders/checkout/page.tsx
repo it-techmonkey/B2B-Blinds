@@ -13,7 +13,7 @@ export default async function CheckoutPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.sub },
-    select: { name: true, email: true, phone: true, businessName: true },
+    select: { name: true, email: true, phone: true, businessName: true, city: true },
   });
 
   const inner = (
@@ -30,6 +30,7 @@ export default async function CheckoutPage() {
           email: user?.email ?? "",
           phone: user?.phone ?? "",
           businessName: user?.businessName ?? "",
+          city: user?.city ?? "",
         }}
       />
     </div>

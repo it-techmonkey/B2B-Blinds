@@ -47,6 +47,7 @@ model User {
   pricingDiscount Decimal? @map("pricing_discount") @db.Decimal(5, 2)
   businessName String? @map("business_name")
   phone       String?
+  city        String?
   invoiceAddress  String? @map("invoice_address") @db.Text
   deliveryAddress String? @map("delivery_address") @db.Text
   passwordResetToken       String?   @unique @map("password_reset_token")

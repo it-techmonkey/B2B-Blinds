@@ -34,7 +34,14 @@ export async function loginUser(email: string, password: string) {
   return { token, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
 }
 
-export async function registerCustomer(name: string, email: string, password: string) {
+export async function registerCustomer(
+  name: string,
+  email: string,
+  password: string,
+  businessName: string,
+  phone: string,
+  city: string
+) {
   const normalized = email.toLowerCase();
   const adminEmail = (process.env.ADMIN_EMAIL ?? "").toLowerCase();
   if (adminEmail && normalized === adminEmail) {
@@ -47,6 +54,9 @@ export async function registerCustomer(name: string, email: string, password: st
         name,
         email: normalized,
         passwordHash,
+        businessName,
+        phone,
+        city,
         role: UserRole.CUSTOMER,
         status: UserStatus.PENDING,
         approved: false,

@@ -7,8 +7,11 @@ export const loginSchema = z.object({
 });
 
 export const registerSchema = z.object({
-  name: z.string().min(1).max(200),
+  name: z.string().trim().min(1).max(200),
+  businessName: z.string().trim().min(1).max(200),
   email: z.string().email(),
+  phone: z.string().trim().min(6).max(40),
+  city: z.string().trim().min(1).max(120),
   password: z.string().min(8).max(128),
 });
 
@@ -91,6 +94,7 @@ export const orderStatusSchema = z.object({
 export const profilePatchSchema = z.object({
   businessName: z.string().trim().max(200).optional().nullable(),
   phone: z.string().trim().max(40).optional().nullable(),
+  city: z.string().trim().max(120).optional().nullable(),
   invoiceAddress: z.string().trim().max(8000).optional().nullable(),
   deliveryAddress: z.string().trim().max(8000).optional().nullable(),
 });

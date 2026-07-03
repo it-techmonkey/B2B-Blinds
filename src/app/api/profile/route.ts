@@ -16,11 +16,13 @@ export async function PATCH(request: NextRequest) {
     const patch: {
       businessName?: string | null;
       phone?: string | null;
+      city?: string | null;
       invoiceAddress?: string | null;
       deliveryAddress?: string | null;
     } = {};
     if (data.businessName !== undefined) patch.businessName = data.businessName;
     if (data.phone !== undefined) patch.phone = data.phone;
+    if (data.city !== undefined) patch.city = data.city;
     if (data.invoiceAddress !== undefined) patch.invoiceAddress = data.invoiceAddress;
     if (data.deliveryAddress !== undefined) patch.deliveryAddress = data.deliveryAddress;
 
@@ -33,6 +35,7 @@ export async function PATCH(request: NextRequest) {
         email: true,
         businessName: true,
         phone: true,
+        city: true,
         invoiceAddress: true,
         deliveryAddress: true,
       },

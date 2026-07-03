@@ -9,8 +9,15 @@ import { ZodError } from "zod";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password } = registerSchema.parse(body);
-    const { token, user, pendingApproval } = await registerCustomer(name, email, password);
+    const { name, email, password, businessName, phone, city } = registerSchema.parse(body);
+    const { token, user, pendingApproval } = await registerCustomer(
+      name,
+      email,
+      password,
+      businessName,
+      phone,
+      city
+    );
     const res = jsonOk({ user, pendingApproval: pendingApproval ?? false }, 201);
     if (token) {
       res.cookies.set(COOKIE_NAME, token, {

@@ -22,6 +22,7 @@ export default async function ProfilePage() {
       email: true,
       businessName: true,
       phone: true,
+      city: true,
       invoiceAddress: true,
       deliveryAddress: true,
     },
@@ -53,6 +54,7 @@ export default async function ProfilePage() {
           initial={{
             businessName: user.businessName,
             phone: user.phone,
+            city: user.city,
             invoiceAddress: user.invoiceAddress,
             deliveryAddress: user.deliveryAddress,
           }}

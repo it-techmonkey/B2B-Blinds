@@ -20,6 +20,7 @@ type InitialCustomer = {
   email: string;
   phone: string;
   businessName: string;
+  city: string;
 };
 
 export function CheckoutClient({ isCustomer, initialCustomer }: { isCustomer: boolean; initialCustomer?: InitialCustomer }) {
@@ -36,7 +37,7 @@ export function CheckoutClient({ isCustomer, initialCustomer }: { isCustomer: bo
     businessName: initialCustomer?.businessName ?? "",
     email: initialCustomer?.email ?? "",
     phone: initialCustomer?.phone ?? "",
-    city: "",
+    city: initialCustomer?.city ?? "",
     notes: "",
     customerReference: "",
   });

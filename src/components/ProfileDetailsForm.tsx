@@ -6,6 +6,7 @@ import { apiJson } from "@/lib/api-client";
 type Profile = {
   businessName: string | null;
   phone: string | null;
+  city: string | null;
   invoiceAddress: string | null;
   deliveryAddress: string | null;
 };
@@ -13,6 +14,7 @@ type Profile = {
 export function ProfileDetailsForm({ initial }: { initial: Profile }) {
   const [businessName, setBusinessName] = useState(initial.businessName ?? "");
   const [phone, setPhone] = useState(initial.phone ?? "");
+  const [city, setCity] = useState(initial.city ?? "");
   const [invoiceAddress, setInvoiceAddress] = useState(initial.invoiceAddress ?? "");
   const [deliveryAddress, setDeliveryAddress] = useState(initial.deliveryAddress ?? "");
   const [message, setMessage] = useState<string | null>(null);
@@ -30,6 +32,7 @@ export function ProfileDetailsForm({ initial }: { initial: Profile }) {
         body: JSON.stringify({
           businessName: businessName.trim() || null,
           phone: phone.trim() || null,
+          city: city.trim() || null,
           invoiceAddress: invoiceAddress.trim() || null,
           deliveryAddress: deliveryAddress.trim() || null,
         }),
@@ -78,6 +81,18 @@ export function ProfileDetailsForm({ initial }: { initial: Profile }) {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="Best contact number"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="field-label" htmlFor="city">
+            City
+          </label>
+          <input
+            id="city"
+            className="input-field"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="Dispatch or delivery city"
           />
         </div>
         <div className="sm:col-span-2">
