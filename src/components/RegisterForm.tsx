@@ -16,6 +16,7 @@ export function RegisterForm() {
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
@@ -24,6 +25,10 @@ export function RegisterForm() {
     e.preventDefault();
     setError(null);
     setPendingMessage(null);
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await apiJson<{ pendingApproval?: boolean }>("/api/auth/register", {
@@ -133,6 +138,15 @@ export function RegisterForm() {
         autoComplete="new-password"
         value={password}
         onChange={setPassword}
+        minLength={8}
+        disabled={Boolean(pendingMessage)}
+      />
+      <PasswordField
+        id="reg-confirm-password"
+        label="Confirm password"
+        autoComplete="new-password"
+        value={confirmPassword}
+        onChange={setConfirmPassword}
         minLength={8}
         disabled={Boolean(pendingMessage)}
       />

@@ -4,6 +4,8 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { InvoicePdfLink } from "@/components/InvoicePdfLink";
 import { OrderStatusBadge } from "@/components/OrderStatusBadge";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
+import { PaymentStatusBadge } from "@/components/PaymentStatusBadge";
+import { PaymentStatusSelect } from "@/components/PaymentStatusSelect";
 import { PageHeader } from "@/components/PageHeader";
 import { getSession } from "@/lib/auth/get-session";
 import { getOrderById } from "@/server/services/order.service";
@@ -41,7 +43,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
         }
       />
 
-      <section className="mb-6 grid gap-3 sm:grid-cols-3">
+      <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="stat-card">
           <p className="stat-label">Customer</p>
           <p className="stat-value !text-xl">{s.customerName}</p>
@@ -54,6 +56,15 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           </div>
           <div className="mt-3">
             <OrderStatusSelect orderId={s.id} current={s.status} compact />
+          </div>
+        </div>
+        <div className="stat-card">
+          <p className="stat-label">Payment</p>
+          <div className="mt-2">
+            <PaymentStatusBadge status={s.paymentStatus} />
+          </div>
+          <div className="mt-3">
+            <PaymentStatusSelect orderId={s.id} current={s.paymentStatus} compact />
           </div>
         </div>
         <div className="stat-card">

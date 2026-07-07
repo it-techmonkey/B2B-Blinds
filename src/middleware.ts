@@ -18,6 +18,8 @@ export async function middleware(request: NextRequest) {
     pathname === "/register" ||
     pathname === "/forgot-password" ||
     pathname === "/reset-password";
+  // Public marketing landing page — shown to everyone, never redirected.
+  const isPublicPage = pathname === "/";
 
   let role: string | null = null;
   const secretKey = getSecret();
@@ -37,12 +39,18 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/admin/orders", request.url));
     }
     if (role === "CUSTOMER") {
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL("/catalog", request.url));
     }
     return NextResponse.next();
   }
 
-  // Everything except login/register is private.
+  // The landing page at "/" is public and is never redirected — signed-in users
+  // reach their dashboard via the header link rather than an automatic bounce.
+  if (isPublicPage) {
+    return NextResponse.next();
+  }
+
+  // Everything else is private.
   if (!isAuthenticated) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -58,7 +66,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (role === "CUSTOMER" && isAdminPath) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/catalog", request.url));
   }
 
   return NextResponse.next();

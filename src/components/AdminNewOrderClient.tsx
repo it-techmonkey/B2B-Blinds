@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiJson } from "@/lib/api-client";
+import { sortByCategoryOrder } from "@/lib/category-order";
 
 type Variant = { id: string; size: string; price: string; stock: number; unit: string };
 
@@ -183,7 +184,7 @@ export function AdminNewOrderClient() {
       if (bucket) bucket.push(product);
       else grouped.set(key, [product]);
     }
-    return Array.from(grouped.entries());
+    return sortByCategoryOrder(Array.from(grouped.entries()));
   }, [products]);
 
   if (loading) {

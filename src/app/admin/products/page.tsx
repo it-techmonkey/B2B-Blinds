@@ -4,6 +4,7 @@ import { DeleteProductButton } from "@/components/DeleteProductButton";
 import { PageHeader } from "@/components/PageHeader";
 import { getSession } from "@/lib/auth/get-session";
 import { listAllProductsAdmin, getProductStats } from "@/server/services/product.service";
+import { sortByCategoryOrder } from "@/lib/category-order";
 import { redirect } from "next/navigation";
 
 export default async function AdminProductsPage() {
@@ -17,13 +18,14 @@ export default async function AdminProductsPage() {
     getProductStats(),
   ]);
 
-  // Group by category, preserving alphabetical category order
+  // Group by category, ordered per CATEGORY_ORDER
   const grouped = new Map<string, typeof data>();
   for (const p of data) {
     const key = p.category.name;
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(p);
   }
+  const orderedGroups = sortByCategoryOrder(Array.from(grouped.entries()));
 
   return (
     <DashboardShell role="ADMIN">
@@ -55,7 +57,7 @@ export default async function AdminProductsPage() {
         </section>
 
         <div className="space-y-6">
-          {Array.from(grouped.entries()).map(([categoryName, products]) => (
+          {orderedGroups.map(([categoryName, products]) => (
             <section key={categoryName} className="card-dashboard overflow-hidden p-0">
               <div className="flex items-center justify-between border-b border-border px-4 py-3">
                 <h2 className="text-sm font-semibold text-foreground">{categoryName}</h2>

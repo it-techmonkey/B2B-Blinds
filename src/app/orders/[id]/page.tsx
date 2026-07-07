@@ -3,6 +3,7 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { InvoicePdfLink } from "@/components/InvoicePdfLink";
 import { OrderPlacedBanner } from "@/components/OrderPlacedBanner";
 import { OrderStatusBadge } from "@/components/OrderStatusBadge";
+import { PaymentStatusBadge } from "@/components/PaymentStatusBadge";
 import { getSession } from "@/lib/auth/get-session";
 import { getOrderById } from "@/server/services/order.service";
 import { serializeOrder } from "@/server/serialize";
@@ -47,8 +48,9 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               <p className="mt-1 text-xs text-muted-foreground">Your ref: <span className="font-medium text-foreground">{s.customerReference}</span></p>
             ) : null}
             <p className="mt-2 text-sm text-muted-foreground">{new Date(s.createdAt).toLocaleString()}</p>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-2">
               <OrderStatusBadge status={s.status} />
+              <PaymentStatusBadge status={s.paymentStatus} />
             </div>
           </div>
           <div className="rounded-[20px] border border-border/80 bg-muted/65 p-4 lg:min-w-[16rem]">

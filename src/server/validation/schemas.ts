@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OrderStatus, VariantUnit } from "@prisma/client";
+import { OrderStatus, PaymentStatus, VariantUnit } from "@prisma/client";
 
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.string().email()),
@@ -89,6 +89,10 @@ export const createOrderSchema = z.object({
 
 export const orderStatusSchema = z.object({
   status: z.enum([OrderStatus.CREATED, OrderStatus.SHIPPED, OrderStatus.DELIVERED]),
+});
+
+export const orderPaymentStatusSchema = z.object({
+  paymentStatus: z.enum([PaymentStatus.UNPAID, PaymentStatus.PAID]),
 });
 
 export const profilePatchSchema = z.object({

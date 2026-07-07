@@ -176,6 +176,33 @@ export async function getProductStats() {
   };
 }
 
+export async function getProductsSold() {
+  const grouped = await prisma.orderItem.groupBy({
+    by: ["productId"],
+    _sum: { quantity: true, total: true },
+  });
+  if (grouped.length === 0) return [];
+
+  const products = await prisma.product.findMany({
+    where: { id: { in: grouped.map((g) => g.productId) } },
+    select: { id: true, name: true, category: { select: { name: true } } },
+  });
+  const productById = new Map(products.map((p) => [p.id, p]));
+
+  return grouped
+    .map((g) => {
+      const product = productById.get(g.productId);
+      return {
+        productId: g.productId,
+        productName: product?.name ?? "Deleted product",
+        categoryName: product?.category.name ?? "—",
+        unitsSold: g._sum.quantity ?? 0,
+        revenue: (g._sum.total ?? new Prisma.Decimal(0)).toFixed(2),
+      };
+    })
+    .sort((a, b) => b.unitsSold - a.unitsSold);
+}
+
 export async function listProductsAdmin(page: number, limit: number) {
   const skip = (page - 1) * limit;
   const [items, total] = await Promise.all([

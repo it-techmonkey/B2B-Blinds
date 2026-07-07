@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/DashboardShell";
 import { OrderStatusBadge } from "@/components/OrderStatusBadge";
+import { PaymentStatusBadge } from "@/components/PaymentStatusBadge";
 import { PageHeader } from "@/components/PageHeader";
 import { getSession } from "@/lib/auth/get-session";
 import { listMyOrders } from "@/server/services/order.service";
@@ -85,13 +86,14 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 <div key={group.label} className="space-y-2">
                   <p className="px-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">{group.label}</p>
                   <div className="table-shell overflow-x-auto">
-                    <table className="w-full min-w-[680px] text-sm">
+                    <table className="w-full min-w-190 text-sm">
                       <thead>
                         <tr className="table-head">
                           <th className="px-4 py-3 font-medium">Order #</th>
                           <th className="px-4 py-3 font-medium">Your Ref</th>
                           <th className="px-4 py-3 font-medium">Time</th>
                           <th className="px-4 py-3 font-medium">Status</th>
+                          <th className="px-4 py-3 font-medium">Payment</th>
                           <th className="px-4 py-3 text-right font-medium">Total</th>
                           <th className="px-4 py-3 text-right font-medium">Open</th>
                         </tr>
@@ -104,6 +106,9 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                             <td className="px-4 py-3 text-muted-foreground">{new Date(s.createdAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}</td>
                             <td className="px-4 py-3">
                               <OrderStatusBadge status={s.status} />
+                            </td>
+                            <td className="px-4 py-3">
+                              <PaymentStatusBadge status={s.paymentStatus} />
                             </td>
                             <td className="px-4 py-3 text-right font-semibold tabular-nums">${s.totalAmount}</td>
                             <td className="px-4 py-3 text-right">

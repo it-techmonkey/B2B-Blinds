@@ -26,6 +26,11 @@ enum OrderStatus {
   DELIVERED
 }
 
+enum PaymentStatus {
+  UNPAID
+  PAID
+}
+
 enum VariantUnit {
   PIECE
   METER
@@ -144,6 +149,7 @@ model Order {
   userId          String?     @map("user_id")
   user            User?       @relation(fields: [userId], references: [id])
   status          OrderStatus @default(CREATED)
+  paymentStatus   PaymentStatus @default(UNPAID) @map("payment_status")
   totalAmount     Decimal     @map("total_amount") @db.Decimal(12, 2)
   customerName         String   @map("customer_name")
   customerBusinessName String   @map("customer_business_name")
@@ -158,6 +164,7 @@ model Order {
 
   @@index([userId])
   @@index([status])
+  @@index([paymentStatus])
   @@map("orders")
 }
 

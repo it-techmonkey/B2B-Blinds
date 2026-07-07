@@ -13,7 +13,7 @@ export function GuestShell({ children }: { children: React.ReactNode }) {
             <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Trade catalog</p>
           </div>
           <nav className="flex w-full items-center gap-1.5 sm:w-auto">
-            <Link href="/" className="btn-ghost h-10 flex-1 px-3 text-sm sm:flex-none">
+            <Link href="/catalog" className="btn-ghost h-10 flex-1 px-3 text-sm sm:flex-none">
               Catalog
             </Link>
             <Link href="/login" className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">

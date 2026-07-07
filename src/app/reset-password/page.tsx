@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiJson } from "@/lib/api-client";
+import { PasswordField } from "@/components/PasswordField";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -54,32 +55,24 @@ function ResetPasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error ? <p className="alert-error">{error}</p> : null}
-      <div className="space-y-1.5">
-        <label htmlFor="password" className="field-label">New password</label>
-        <input
-          id="password"
-          type="password"
-          required
-          autoComplete="new-password"
-          className="input-field"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Min. 8 characters"
-        />
-      </div>
-      <div className="space-y-1.5">
-        <label htmlFor="confirm" className="field-label">Confirm new password</label>
-        <input
-          id="confirm"
-          type="password"
-          required
-          autoComplete="new-password"
-          className="input-field"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          placeholder="Repeat your new password"
-        />
-      </div>
+      <PasswordField
+        id="password"
+        label="New password"
+        autoComplete="new-password"
+        value={password}
+        onChange={setPassword}
+        minLength={8}
+        placeholder="Min. 8 characters"
+      />
+      <PasswordField
+        id="confirm"
+        label="Confirm new password"
+        autoComplete="new-password"
+        value={confirm}
+        onChange={setConfirm}
+        minLength={8}
+        placeholder="Repeat your new password"
+      />
       <button type="submit" disabled={loading} className="btn-primary w-full">
         {loading ? "Updating…" : "Set new password"}
       </button>

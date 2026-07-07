@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
+import { CatalogShopPage } from "@/components/CatalogShopPage";
 
-/** Catalog lives on `/`; keep `/catalog` as a permanent alias for bookmarks. */
-export default function CatalogAliasRedirect() {
-  redirect("/");
+export default async function CatalogPage() {
+  return <CatalogShopPage />;
 }

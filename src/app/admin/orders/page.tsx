@@ -2,6 +2,7 @@ import Link from "next/link";
 import { InvoicePdfLink } from "@/components/InvoicePdfLink";
 import { DashboardShell } from "@/components/DashboardShell";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
+import { PaymentStatusSelect } from "@/components/PaymentStatusSelect";
 import { PageHeader } from "@/components/PageHeader";
 import { getSession } from "@/lib/auth/get-session";
 import { listAllOrders } from "@/server/services/order.service";
@@ -93,7 +94,7 @@ export default async function AdminOrdersPage({
                 <div key={group.label} className="space-y-2">
                   <p className="px-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">{group.label}</p>
                   <div className="table-shell overflow-x-auto">
-                    <table className="w-full min-w-[980px] text-sm">
+                    <table className="w-full min-w-270 text-sm">
                       <thead>
                         <tr className="table-head">
                           <th className="px-3 py-3 font-medium">Name</th>
@@ -103,6 +104,7 @@ export default async function AdminOrdersPage({
                           <th className="px-3 py-3 font-medium">Items</th>
                           <th className="px-3 py-3 text-right font-medium">Total</th>
                           <th className="px-3 py-3 font-medium">Status</th>
+                          <th className="px-3 py-3 font-medium">Payment</th>
                           <th className="px-3 py-3 text-right font-medium">View</th>
                           <th className="px-3 py-3 text-right font-medium">PDF</th>
                         </tr>
@@ -131,6 +133,9 @@ export default async function AdminOrdersPage({
                               <td className="px-3 py-3 text-right font-semibold tabular-nums">${s.totalAmount}</td>
                               <td className="px-3 py-3">
                                 <OrderStatusSelect orderId={s.id} current={s.status} compact />
+                              </td>
+                              <td className="px-3 py-3">
+                                <PaymentStatusSelect orderId={s.id} current={s.paymentStatus} compact />
                               </td>
                               <td className="px-3 py-3 text-right">
                                 <Link href={`/admin/orders/${s.id}`} className="text-xs font-semibold text-primary hover:underline">

@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth/api";
 import { jsonError, jsonOk } from "@/lib/http";
 import { connectionErrorResponse } from "@/lib/prisma-errors";
 import { AppError } from "@/server/errors";
+import { sendPricingUpdatedEmail } from "@/lib/email";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -95,6 +96,31 @@ export async function PUT(request: NextRequest, context: Ctx) {
         });
       }
     }
+
+    const [overridesDetail, blockedDetail] = await Promise.all([
+      body.overrides !== undefined && body.overrides.length > 0
+        ? prisma.clientPriceOverride.findMany({
+            where: { userId: id },
+            select: {
+              price: true,
+              variant: { select: { size: true, product: { select: { name: true } } } },
+            },
+          })
+        : Promise.resolve([]),
+      body.blockedProductIds !== undefined && body.blockedProductIds.length > 0
+        ? prisma.product.findMany({ where: { id: { in: body.blockedProductIds } }, select: { name: true } })
+        : Promise.resolve([]),
+    ]);
+
+    sendPricingUpdatedEmail(exists.email, exists.name, {
+      discount: body.discount != null && body.discount > 0 ? body.discount.toFixed(2) : null,
+      overrides: overridesDetail.map((o) => ({
+        productName: o.variant.product.name,
+        size: o.variant.size,
+        price: o.price.toFixed(2),
+      })),
+      blockedProductNames: blockedDetail.map((p) => p.name),
+    }).catch((err) => console.error("[pricing] Failed to send pricing update email:", err));
 
     return jsonOk({ ok: true });
   } catch (e) {

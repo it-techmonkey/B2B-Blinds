@@ -258,3 +258,16 @@ export async function updateOrderStatus(orderId: string, status: "CREATED" | "SH
     },
   });
 }
+
+export async function updateOrderPaymentStatus(orderId: string, paymentStatus: "UNPAID" | "PAID") {
+  const existing = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!existing) throw new NotFoundError("Order not found");
+  return prisma.order.update({
+    where: { id: orderId },
+    data: { paymentStatus },
+    include: {
+      items: true,
+      user: { select: { id: true, name: true, email: true } },
+    },
+  });
+}
