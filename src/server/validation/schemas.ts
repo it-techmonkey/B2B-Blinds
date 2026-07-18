@@ -12,6 +12,8 @@ export const registerSchema = z.object({
   email: z.string().email(),
   phone: z.string().trim().min(6).max(40),
   city: z.string().trim().min(1).max(120),
+  postcode: z.string().trim().min(1).max(20),
+  deliveryAddress: z.string().trim().min(1).max(8000),
   password: z.string().min(8).max(128),
 });
 
@@ -99,6 +101,7 @@ export const profilePatchSchema = z.object({
   businessName: z.string().trim().max(200).optional().nullable(),
   phone: z.string().trim().max(40).optional().nullable(),
   city: z.string().trim().max(120).optional().nullable(),
+  postcode: z.string().trim().max(20).optional().nullable(),
   invoiceAddress: z.string().trim().max(8000).optional().nullable(),
   deliveryAddress: z.string().trim().max(8000).optional().nullable(),
 });

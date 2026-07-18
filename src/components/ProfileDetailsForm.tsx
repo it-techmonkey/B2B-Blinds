@@ -7,6 +7,7 @@ type Profile = {
   businessName: string | null;
   phone: string | null;
   city: string | null;
+  postcode: string | null;
   invoiceAddress: string | null;
   deliveryAddress: string | null;
 };
@@ -15,6 +16,7 @@ export function ProfileDetailsForm({ initial }: { initial: Profile }) {
   const [businessName, setBusinessName] = useState(initial.businessName ?? "");
   const [phone, setPhone] = useState(initial.phone ?? "");
   const [city, setCity] = useState(initial.city ?? "");
+  const [postcode, setPostcode] = useState(initial.postcode ?? "");
   const [invoiceAddress, setInvoiceAddress] = useState(initial.invoiceAddress ?? "");
   const [deliveryAddress, setDeliveryAddress] = useState(initial.deliveryAddress ?? "");
   const [message, setMessage] = useState<string | null>(null);
@@ -33,6 +35,7 @@ export function ProfileDetailsForm({ initial }: { initial: Profile }) {
           businessName: businessName.trim() || null,
           phone: phone.trim() || null,
           city: city.trim() || null,
+          postcode: postcode.trim() || null,
           invoiceAddress: invoiceAddress.trim() || null,
           deliveryAddress: deliveryAddress.trim() || null,
         }),
@@ -93,6 +96,18 @@ export function ProfileDetailsForm({ initial }: { initial: Profile }) {
             value={city}
             onChange={(e) => setCity(e.target.value)}
             placeholder="Dispatch or delivery city"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="field-label" htmlFor="postcode">
+            Postcode
+          </label>
+          <input
+            id="postcode"
+            className="input-field"
+            value={postcode}
+            onChange={(e) => setPostcode(e.target.value)}
+            placeholder="Postcode"
           />
         </div>
         <div className="sm:col-span-2">

@@ -9,14 +9,17 @@ import { ZodError } from "zod";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password, businessName, phone, city } = registerSchema.parse(body);
+    const { name, email, password, businessName, phone, city, postcode, deliveryAddress } =
+      registerSchema.parse(body);
     const { token, user, pendingApproval } = await registerCustomer(
       name,
       email,
       password,
       businessName,
       phone,
-      city
+      city,
+      postcode,
+      deliveryAddress
     );
     const res = jsonOk({ user, pendingApproval: pendingApproval ?? false }, 201);
     if (token) {

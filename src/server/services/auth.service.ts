@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { signToken } from "@/lib/auth/jwt";
 import { ForbiddenError, UnauthorizedError } from "@/server/errors";
+import { sendApplicationReceivedEmail } from "@/lib/email";
 
 export async function loginUser(email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase();
@@ -40,7 +41,9 @@ export async function registerCustomer(
   password: string,
   businessName: string,
   phone: string,
-  city: string
+  city: string,
+  postcode: string,
+  deliveryAddress: string
 ) {
   const normalized = email.toLowerCase();
   const adminEmail = (process.env.ADMIN_EMAIL ?? "").toLowerCase();
@@ -57,12 +60,19 @@ export async function registerCustomer(
         businessName,
         phone,
         city,
+        postcode,
+        deliveryAddress,
         role: UserRole.CUSTOMER,
         status: UserStatus.PENDING,
         approved: false,
       },
       select: { id: true, name: true, email: true, role: true, status: true, approved: true },
     });
+    try {
+      await sendApplicationReceivedEmail(user.email, user.name);
+    } catch (emailErr) {
+      console.error("[register] application received email failed:", emailErr);
+    }
     return { token: null as string | null, user, pendingApproval: true };
   } catch (e: unknown) {
     const code = e && typeof e === "object" && "code" in e ? (e as { code: string }).code : "";

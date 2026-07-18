@@ -97,7 +97,7 @@ export function LandingPage({ role = null }: { role?: Role }) {
           <div>
             <span className="badge badge-delivered">Wholesale · Trade only</span>
             <h1 className="page-title mt-5 !text-[clamp(2.3rem,1.4rem+3vw,3.6rem)]">
-              Wholesale blinds and supplies, ordered online.
+              Wholesale Faux wood blinds.
             </h1>
             <p className="dash-desc mt-5 !max-w-xl !text-base">
               {SITE_BRAND} supplies box blinds, ladder tapes, brackets, and tools to the trade. Register your
@@ -172,6 +172,30 @@ export function LandingPage({ role = null }: { role?: Role }) {
           ))}
         </section>
 
+        {/* How it works — only relevant to prospective (logged-out) visitors */}
+        {!isSignedIn ? (
+          <section className="py-14 md:py-18">
+            <SectionKicker>Getting started</SectionKicker>
+            <h2 className="page-title mt-3 !text-[clamp(1.8rem,1.3rem+1.6vw,2.5rem)]">
+              Three steps to your first order.
+            </h2>
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              {STEPS.map((s) => (
+                <div key={s.n} className="card-dashboard flex h-full flex-col p-6">
+                  <span
+                    className="text-2xl font-semibold tracking-[-0.03em] text-primary"
+                    style={{ fontFamily: "var(--font-playfair)" }}
+                  >
+                    {s.n}
+                  </span>
+                  <h3 className="mt-3 text-base font-semibold text-foreground">{s.title}</h3>
+                  <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         {/* Categories */}
         <section className="py-14 md:py-18">
           <SectionKicker>What we supply</SectionKicker>
@@ -218,32 +242,6 @@ export function LandingPage({ role = null }: { role?: Role }) {
             ))}
           </div>
         </section>
-
-        {/* How it works — only relevant to prospective (logged-out) visitors */}
-        {!isSignedIn ? (
-          <section className="py-14 md:py-18">
-            <SectionKicker>Getting started</SectionKicker>
-            <h2 className="page-title mt-3 !text-[clamp(1.8rem,1.3rem+1.6vw,2.5rem)]">
-              Three steps to your first order.
-            </h2>
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              {STEPS.map((s) => (
-                <div key={s.n} className="card-dashboard flex h-full flex-col p-6">
-                  <span
-                    className="text-2xl font-semibold tracking-[-0.03em] text-primary"
-                    style={{ fontFamily: "var(--font-playfair)" }}
-                  >
-                    {s.n}
-                  </span>
-                  <h3 className="mt-3 text-base font-semibold text-foreground">{s.title}</h3>
-                  <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : (
-          <div className="py-14 md:py-18" />
-        )}
 
         {/* CTA band */}
         <section className="overflow-hidden rounded-[24px] border border-sidebar bg-sidebar px-6 py-12 text-sidebar-foreground shadow-[var(--shadow-md)] sm:px-12">

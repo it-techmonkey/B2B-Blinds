@@ -53,6 +53,7 @@ model User {
   businessName String? @map("business_name")
   phone       String?
   city        String?
+  postcode    String?
   invoiceAddress  String? @map("invoice_address") @db.Text
   deliveryAddress String? @map("delivery_address") @db.Text
   passwordResetToken       String?   @unique @map("password_reset_token")

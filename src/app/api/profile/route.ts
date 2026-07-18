@@ -17,12 +17,14 @@ export async function PATCH(request: NextRequest) {
       businessName?: string | null;
       phone?: string | null;
       city?: string | null;
+      postcode?: string | null;
       invoiceAddress?: string | null;
       deliveryAddress?: string | null;
     } = {};
     if (data.businessName !== undefined) patch.businessName = data.businessName;
     if (data.phone !== undefined) patch.phone = data.phone;
     if (data.city !== undefined) patch.city = data.city;
+    if (data.postcode !== undefined) patch.postcode = data.postcode;
     if (data.invoiceAddress !== undefined) patch.invoiceAddress = data.invoiceAddress;
     if (data.deliveryAddress !== undefined) patch.deliveryAddress = data.deliveryAddress;
 
@@ -36,6 +38,7 @@ export async function PATCH(request: NextRequest) {
         businessName: true,
         phone: true,
         city: true,
+        postcode: true,
         invoiceAddress: true,
         deliveryAddress: true,
       },

@@ -23,6 +23,7 @@ export default async function ProfilePage() {
       businessName: true,
       phone: true,
       city: true,
+      postcode: true,
       invoiceAddress: true,
       deliveryAddress: true,
     },
@@ -55,6 +56,7 @@ export default async function ProfilePage() {
             businessName: user.businessName,
             phone: user.phone,
             city: user.city,
+            postcode: user.postcode,
             invoiceAddress: user.invoiceAddress,
             deliveryAddress: user.deliveryAddress,
           }}

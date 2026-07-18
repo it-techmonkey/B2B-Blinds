@@ -81,6 +81,34 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   console.log("[Resend] Email sent:", data?.id);
 }
 
+export async function sendApplicationReceivedEmail(to: string, name: string) {
+  const html = renderEmailLayout({
+    preheader: `Your ${SITE_BRAND} trade account application has been received.`,
+    heading: `Hi ${name}, we've received your application`,
+    bodyHtml: `
+      <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#4b5563">
+        Thanks for applying for a trade account with ${SITE_BRAND}. Your application is now being reviewed
+        by our team, who will confirm your account and set your pricing before your first sign-in.
+      </p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#9aa0ab">
+        We'll email you again as soon as a decision has been made. There's nothing further you need to do right now.
+      </p>
+    `,
+  });
+
+  const { data, error } = await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Your application is being reviewed — ${SITE_BRAND}`,
+    html,
+  });
+  if (error) {
+    console.error("[Resend] Failed to send application received email:", JSON.stringify(error));
+    throw new Error(error.message ?? "Failed to send email");
+  }
+  console.log("[Resend] Application received email sent:", data?.id);
+}
+
 export type PricingUpdateSummary = {
   discount: string | null;
   overrides: { productName: string; size: string; price: string }[];
