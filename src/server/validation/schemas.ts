@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OrderStatus, PaymentStatus, VariantUnit } from "@prisma/client";
+import { OrderStatus, PaymentStatus, StockAdjustmentReason, StockAdjustmentType, VariantUnit } from "@prisma/client";
 
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.string().email()),
@@ -24,9 +24,13 @@ export const productVariantInputSchema = z.object({
   price: z.coerce.number().positive().max(1_000_000_000),
   stock: z.coerce.number().int().min(0).max(1_000_000_000),
   unit: variantUnitSchema,
+  unitDetail: z.string().trim().max(200).optional().default(""),
+  purchaseCost: z.coerce.number().min(0).max(1_000_000_000).optional().default(0),
+  purchaseNote: z.string().trim().max(1_000).optional().default(""),
 });
 
 export const productCreateBaseSchema = z.object({
+  code: z.string().trim().min(1).max(100),
   name: z.string().min(1).max(300),
   categoryId: z.string().min(1),
   hasVariants: z.coerce.boolean(),
@@ -37,6 +41,7 @@ export const productCreateBaseSchema = z.object({
 });
 
 export const productUpdateSchema = z.object({
+  code: z.string().trim().min(1).max(100).optional(),
   name: z.string().min(1).max(300).optional(),
   categoryId: z.string().min(1).optional(),
   hasVariants: z.coerce.boolean().optional(),
@@ -48,9 +53,34 @@ export const productVariantWriteSchema = z.object({
   price: z.coerce.number().positive().max(1_000_000_000),
   stock: z.coerce.number().int().min(0).max(1_000_000_000),
   unit: variantUnitSchema,
+  unitDetail: z.string().trim().max(200).optional(),
 });
 
 export const productVariantPatchSchema = productVariantWriteSchema.partial();
+
+export const variantRestockSchema = z.object({
+  quantity: z.coerce.number().int().positive().max(1_000_000),
+  costPerUnit: z.coerce.number().min(0).max(1_000_000_000),
+  purchasedAt: z.coerce.date().optional(),
+  note: z.string().trim().max(1_000).optional(),
+});
+
+export const variantStockAdjustmentSchema = z.object({
+  type: z.enum([StockAdjustmentType.INCREASE, StockAdjustmentType.DECREASE]),
+  quantity: z.coerce.number().int().positive().max(1_000_000),
+  reason: z.enum([
+    StockAdjustmentReason.MISSING,
+    StockAdjustmentReason.FOUND,
+    StockAdjustmentReason.MISPLACED,
+    StockAdjustmentReason.COUNTING_ERROR,
+    StockAdjustmentReason.OTHER,
+  ]),
+  note: z.string().trim().max(1_000).optional(),
+});
+
+export const creditNoteSchema = z.object({
+  reason: z.string().trim().max(1_000).optional(),
+});
 
 export const orderItemInputSchema = z.object({
   productId: z.preprocess(
@@ -121,7 +151,7 @@ export function resolveProductCreateVariants(
   const variants = data.variants;
   if (variants && variants.length > 0) return variants;
   if (!data.hasVariants && data.price != null && data.stock != null) {
-    return [{ size: "Standard", price: data.price, stock: data.stock, unit: VariantUnit.PIECE }];
+    return [{ size: "Standard", price: data.price, stock: data.stock, unit: VariantUnit.PIECE, unitDetail: "", purchaseCost: 0, purchaseNote: "Opening stock" }];
   }
   return [];
 }

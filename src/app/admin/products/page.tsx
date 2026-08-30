@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/DashboardShell";
-import { DeleteProductButton } from "@/components/DeleteProductButton";
+import { AdminProductsTable } from "@/components/AdminProductsTable";
 import { PageHeader } from "@/components/PageHeader";
 import { getSession } from "@/lib/auth/get-session";
 import { listAllProductsAdmin, getProductStats } from "@/server/services/product.service";
-import { sortByCategoryOrder } from "@/lib/category-order";
 import { redirect } from "next/navigation";
 
 export default async function AdminProductsPage() {
@@ -17,15 +16,6 @@ export default async function AdminProductsPage() {
     listAllProductsAdmin(),
     getProductStats(),
   ]);
-
-  // Group by category, ordered per CATEGORY_ORDER
-  const grouped = new Map<string, typeof data>();
-  for (const p of data) {
-    const key = p.category.name;
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key)!.push(p);
-  }
-  const orderedGroups = sortByCategoryOrder(Array.from(grouped.entries()));
 
   return (
     <DashboardShell role="ADMIN">
@@ -56,73 +46,7 @@ export default async function AdminProductsPage() {
           </div>
         </section>
 
-        <div className="space-y-6">
-          {orderedGroups.map(([categoryName, products]) => (
-            <section key={categoryName} className="card-dashboard overflow-hidden p-0">
-              <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                <h2 className="text-sm font-semibold text-foreground">{categoryName}</h2>
-                <span className="text-xs text-muted-foreground">
-                  {products.length} product{products.length === 1 ? "" : "s"}
-                </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-190 table-fixed text-sm">
-                  <colgroup>
-                    <col className="w-[40%]" />
-                    <col className="w-[15%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[10%]" />
-                    <col className="w-[10%]" />
-                    <col className="w-[13%]" />
-                  </colgroup>
-                  <thead>
-                    <tr className="table-head">
-                      <th className="px-4 py-3 font-medium">Name</th>
-                      <th className="px-4 py-3 font-medium">Variants</th>
-                      <th className="px-4 py-3 font-medium">Price</th>
-                      <th className="px-4 py-3 font-medium">Stock</th>
-                      <th className="px-4 py-3 font-medium">Active</th>
-                      <th className="px-4 py-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.map((p) => (
-                      <tr key={p.id} className="table-row">
-                        <td className="px-4 py-3 font-semibold">{p.name}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {p.hasVariants ? `${p.variants.length} sizes` : "Simple"}
-                        </td>
-                        <td className="px-4 py-3 font-medium tabular-nums">
-                          {p.priceFrom === p.priceTo
-                            ? `$${p.priceFrom}`
-                            : `$${p.priceFrom}–${p.priceTo}`}
-                        </td>
-                        <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                          {p.totalStock}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`badge ${p.isActive ? "badge-completed" : "badge-neutral"}`}>
-                            {p.isActive ? "On" : "Off"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <Link
-                            href={`/admin/products/${p.id}/edit`}
-                            className="font-semibold text-primary hover:underline"
-                          >
-                            Edit
-                          </Link>
-                          <span className="mx-2 text-muted-foreground">·</span>
-                          <DeleteProductButton productId={p.id} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          ))}
-        </div>
+        <AdminProductsTable products={data} />
       </div>
     </DashboardShell>
   );

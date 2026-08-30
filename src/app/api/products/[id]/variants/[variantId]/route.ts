@@ -1,16 +1,10 @@
 import { NextRequest } from "next/server";
-import { z, ZodError } from "zod";
-import { productVariantPatchSchema } from "@/server/validation/schemas";
-import { updateVariant, deleteVariant, serializeVariant } from "@/server/services/product.service";
+import { ZodError } from "zod";
+import { productVariantPatchSchema, variantRestockSchema, variantStockAdjustmentSchema } from "@/server/validation/schemas";
+import { addVariantRestock, adjustVariantStock, updateVariant, deleteVariant, serializeVariant } from "@/server/services/product.service";
 import { requireAdmin } from "@/lib/auth/api";
 import { jsonError, jsonOk } from "@/lib/http";
 import { AppError } from "@/server/errors";
-import { prisma } from "@/lib/db";
-
-const stockArrivalSchema = z.object({
-  qty: z.coerce.number().int().positive().max(1_000_000),
-  costPerUnit: z.coerce.number().min(0).max(1_000_000_000).optional().default(0),
-});
 
 type Ctx = { params: Promise<{ id: string; variantId: string }> };
 
@@ -25,6 +19,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
       price: data.price,
       stock: data.stock,
       unit: data.unit,
+      unitDetail: data.unitDetail,
     });
     return jsonOk({ variant: serializeVariant(v) });
   } catch (e) {
@@ -42,14 +37,10 @@ export async function PUT(request: NextRequest, context: Ctx) {
 export async function PATCH(request: NextRequest, context: Ctx) {
   try {
     await requireAdmin(request);
-    const { variantId } = await context.params;
-    const body = await request.json();
-    const { qty, costPerUnit } = stockArrivalSchema.parse(body);
-    const v = await prisma.productVariant.update({
-      where: { id: variantId },
-      data: { stock: { increment: qty } },
-    });
-    return jsonOk({ variant: serializeVariant(v), addedQty: qty, costPerUnit });
+    const { id: productId, variantId } = await context.params;
+    const data = variantRestockSchema.parse(await request.json());
+    const { variant, restock } = await addVariantRestock(productId, variantId, data);
+    return jsonOk({ variant: serializeVariant(variant), restock });
   } catch (e) {
     if (e instanceof ZodError) {
       return jsonError("Validation failed", 400, e.flatten());
@@ -57,6 +48,21 @@ export async function PATCH(request: NextRequest, context: Ctx) {
     if (e instanceof AppError) {
       return jsonError(e.message, e.statusCode);
     }
+    console.error(e);
+    return jsonError("Internal server error", 500);
+  }
+}
+
+export async function POST(request: NextRequest, context: Ctx) {
+  try {
+    await requireAdmin(request);
+    const { id: productId, variantId } = await context.params;
+    const data = variantStockAdjustmentSchema.parse(await request.json());
+    const { variant, adjustment } = await adjustVariantStock(productId, variantId, data);
+    return jsonOk({ variant: serializeVariant(variant), adjustment });
+  } catch (e) {
+    if (e instanceof ZodError) return jsonError("Validation failed", 400, e.flatten());
+    if (e instanceof AppError) return jsonError(e.message, e.statusCode);
     console.error(e);
     return jsonError("Internal server error", 500);
   }

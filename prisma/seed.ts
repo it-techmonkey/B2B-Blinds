@@ -10,7 +10,6 @@ import { fileURLToPath } from "url";
 loadEnvConfig(process.cwd());
 
 const require = createRequire(import.meta.url);
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const XLSX = require("xlsx") as {
   readFile: (p: string) => import("xlsx").WorkBook;
   utils: { sheet_to_json: <T>(sheet: unknown, opts?: { defval?: string }) => T[] };

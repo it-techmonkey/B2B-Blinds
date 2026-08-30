@@ -34,9 +34,10 @@ export default async function AdminOrdersPage({
   const page = Math.max(1, Number(sp.page) || 1);
   const { data, pagination } = await listAllOrders(page, 20);
 
-  const totalValue = data.reduce((sum, o) => sum + Number(o.totalAmount), 0);
-  const openOrders = data.filter((o) => o.status !== "DELIVERED").length;
-  const completed = data.filter((o) => o.status === "DELIVERED").length;
+  const liveOrders = data.filter((o) => !o.creditNote);
+  const totalValue = liveOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+  const openOrders = liveOrders.filter((o) => o.status !== "DELIVERED").length;
+  const completed = liveOrders.filter((o) => o.status === "DELIVERED").length;
 
   return (
     <DashboardShell role="ADMIN">
@@ -130,12 +131,12 @@ export default async function AdminOrdersPage({
                               <td className="max-w-[220px] px-3 py-3 text-muted-foreground" title={s.items.map((i) => i.productName).join(", ")}>
                                 <span className="line-clamp-2">{preview}</span>
                               </td>
-                              <td className="px-3 py-3 text-right font-semibold tabular-nums">${s.totalAmount}</td>
+                              <td className="px-3 py-3 text-right font-semibold tabular-nums">{s.creditNote ? <span className="text-destructive">Credited</span> : `$${s.totalAmount}`}</td>
                               <td className="px-3 py-3">
-                                <OrderStatusSelect orderId={s.id} current={s.status} compact />
+                                {s.creditNote ? <span className="badge badge-neutral">Credited</span> : <OrderStatusSelect orderId={s.id} current={s.status} compact />}
                               </td>
                               <td className="px-3 py-3">
-                                <PaymentStatusSelect orderId={s.id} current={s.paymentStatus} compact />
+                                {s.creditNote ? <span className="text-xs text-muted-foreground">Reversed</span> : <PaymentStatusSelect orderId={s.id} current={s.paymentStatus} compact />}
                               </td>
                               <td className="px-3 py-3 text-right">
                                 <Link href={`/admin/orders/${s.id}`} className="text-xs font-semibold text-primary hover:underline">

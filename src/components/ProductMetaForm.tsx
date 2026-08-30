@@ -11,11 +11,12 @@ export function ProductMetaForm({
   initial,
 }: {
   productId: string;
-  initial: { name: string; categoryId: string; hasVariants: boolean; isActive: boolean };
+  initial: { code: string; name: string; categoryId: string; hasVariants: boolean; isActive: boolean };
 }) {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState(initial.name);
+  const [code, setCode] = useState(initial.code);
   const [categoryId, setCategoryId] = useState(initial.categoryId);
   const [hasVariants, setHasVariants] = useState(initial.hasVariants);
   const [isActive, setIsActive] = useState(initial.isActive);
@@ -44,7 +45,7 @@ export function ProductMetaForm({
     try {
       await apiJson(`/api/products/${productId}`, {
         method: "PUT",
-        body: JSON.stringify({ name, categoryId, hasVariants, isActive }),
+        body: JSON.stringify({ code, name, categoryId, hasVariants, isActive }),
       });
       router.refresh();
     } catch (err) {
@@ -61,7 +62,11 @@ export function ProductMetaForm({
         <p className="section-kicker">Metadata</p>
         <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-foreground">Product settings</h2>
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div>
+          <label className="field-label" htmlFor="pm-code">Product code</label>
+          <input id="pm-code" required className="input-field" value={code} onChange={(e) => setCode(e.target.value)} />
+        </div>
         <div>
           <label className="field-label" htmlFor="pm-name">
             Name

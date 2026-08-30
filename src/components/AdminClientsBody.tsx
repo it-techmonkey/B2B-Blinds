@@ -586,6 +586,7 @@ function ClientsTable({
               </td>
               <td className="px-3 py-3 text-right">
                 <div className="flex flex-wrap justify-end gap-2">
+                  <Link href={`/admin/clients/${r.id}`} className="btn-secondary h-9 px-3 text-xs">View / edit</Link>
                   {(r.status === "PENDING" || r.status === "REJECTED") && (
                     <button
                       type="button"

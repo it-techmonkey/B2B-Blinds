@@ -6,7 +6,7 @@ export function formatDecimal(d: Prisma.Decimal): string {
 }
 
 /** List/dashboard row without line items (lighter DB payload). */
-export function serializeOrderRow(o: Order) {
+export function serializeOrderRow(o: Order & { creditNote?: { id: string } | null }) {
   return {
     id: o.id,
     orderNumber: o.orderNumber,
@@ -22,6 +22,7 @@ export function serializeOrderRow(o: Order) {
     totalAmount: formatDecimal(o.totalAmount),
     createdAt: o.createdAt.toISOString(),
     updatedAt: o.updatedAt.toISOString(),
+    isCredited: Boolean(o.creditNote),
   };
 }
 
@@ -30,6 +31,7 @@ type OrderWithRelations = Order & {
     variant?: { id: string; size: string; stock: number } | null;
   })[];
   user?: { id: string; name: string; email: string } | null;
+  creditNote?: { id: string; creditNoteNumber: string; amount: Prisma.Decimal; reason: string | null; createdAt: Date } | null;
 };
 
 function dec(d: Prisma.Decimal): string {
@@ -54,6 +56,9 @@ export function serializeOrder(o: OrderWithRelations) {
     createdAt: o.createdAt.toISOString(),
     updatedAt: o.updatedAt.toISOString(),
     user: o.user ?? undefined,
+    creditNote: o.creditNote
+      ? { id: o.creditNote.id, number: o.creditNote.creditNoteNumber, amount: dec(o.creditNote.amount), reason: o.creditNote.reason, createdAt: o.creditNote.createdAt.toISOString() }
+      : null,
     items: o.items.map((i) => ({
       id: i.id,
       productId: i.productId,

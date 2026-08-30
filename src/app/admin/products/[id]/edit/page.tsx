@@ -25,6 +25,8 @@ export default async function EditProductPage({ params }: Props) {
     price: v.price.toFixed(2),
     stock: v.stock,
     unit: v.unit as "PIECE" | "METER" | "BOX" | "ROLL",
+    unitDetail: v.unitDetail,
+    currentCost: v.currentCost.toFixed(2),
   }));
 
   return (
@@ -38,6 +40,7 @@ export default async function EditProductPage({ params }: Props) {
         <ProductMetaForm
           productId={product.id}
           initial={{
+            code: product.code ?? "",
             name: product.name,
             categoryId: product.categoryId,
             hasVariants: product.hasVariants,

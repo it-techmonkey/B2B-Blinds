@@ -27,6 +27,9 @@ export type VariantInput = {
   price: number;
   stock: number;
   unit: VariantUnit;
+  unitDetail?: string;
+  purchaseCost?: number;
+  purchaseNote?: string;
 };
 
 function assertVariantShape(hasVariants: boolean, variants: VariantInput[]) {
@@ -39,13 +42,15 @@ function assertVariantShape(hasVariants: boolean, variants: VariantInput[]) {
   }
 }
 
-export function serializeVariant(v: { id: string; size: string; price: Prisma.Decimal; stock: number; unit: VariantUnit }) {
+export function serializeVariant(v: { id: string; size: string; price: Prisma.Decimal; stock: number; unit: VariantUnit; unitDetail: string | null; currentCost: Prisma.Decimal }) {
   return {
     id: v.id,
     size: v.size,
     price: decimalToString(v.price),
     stock: v.stock,
     unit: v.unit,
+    unitDetail: v.unitDetail,
+    currentCost: decimalToString(v.currentCost),
   };
 }
 
@@ -60,8 +65,15 @@ export function serializeProductListRow(
     if (v.price.gt(maxP)) maxP = v.price;
   }
   const totalStock = p.variants.reduce((s, v) => s + v.stock, 0);
+  let minCost = p.variants[0]?.currentCost ?? new Prisma.Decimal(0);
+  let maxCost = p.variants[0]?.currentCost ?? new Prisma.Decimal(0);
+  for (const v of p.variants) {
+    if (v.currentCost.lt(minCost)) minCost = v.currentCost;
+    if (v.currentCost.gt(maxCost)) maxCost = v.currentCost;
+  }
   return {
     id: p.id,
+    code: p.code,
     name: p.name,
     categoryId: p.categoryId,
     category: p.category,
@@ -70,6 +82,8 @@ export function serializeProductListRow(
     variants,
     priceFrom: decimalToString(minP),
     priceTo: decimalToString(maxP),
+    currentCostFrom: decimalToString(minCost),
+    currentCostTo: decimalToString(maxCost),
     totalStock,
   };
 }
@@ -179,6 +193,7 @@ export async function getProductStats() {
 export async function getProductsSold() {
   const grouped = await prisma.orderItem.groupBy({
     by: ["productId"],
+    where: { order: { creditNote: null } },
     _sum: { quantity: true, total: true },
   });
   if (grouped.length === 0) return [];
@@ -238,6 +253,7 @@ export async function getProductById(id: string) {
 }
 
 export async function createProduct(input: {
+  code: string;
   name: string;
   categoryId: string;
   hasVariants: boolean;
@@ -247,6 +263,7 @@ export async function createProduct(input: {
   assertVariantShape(input.hasVariants, input.variants);
   return prisma.product.create({
     data: {
+      code: input.code,
       name: input.name,
       categoryId: input.categoryId,
       hasVariants: input.hasVariants,
@@ -257,7 +274,16 @@ export async function createProduct(input: {
           price: new Prisma.Decimal(v.price),
           stock: v.stock,
           unit: v.unit,
+          unitDetail: v.unitDetail?.trim() || null,
+          currentCost: new Prisma.Decimal(v.purchaseCost ?? 0),
           sortOrder: sizeToSortOrder(v.size),
+          restocks: v.stock > 0 ? {
+            create: {
+              quantity: v.stock,
+              costPerUnit: new Prisma.Decimal(v.purchaseCost ?? 0),
+              note: v.purchaseNote?.trim() || "Opening stock",
+            },
+          } : undefined,
         })),
       },
     },
@@ -267,7 +293,7 @@ export async function createProduct(input: {
 
 export async function updateProduct(
   id: string,
-  patch: Partial<{ name: string; categoryId: string; hasVariants: boolean; isActive: boolean }>
+  patch: Partial<{ code: string; name: string; categoryId: string; hasVariants: boolean; isActive: boolean }>
 ) {
   const existing = await prisma.product.findUnique({
     where: { id },
@@ -286,6 +312,7 @@ export async function updateProduct(
   }
 
   const data: Prisma.ProductUpdateInput = {};
+  if (patch.code !== undefined) data.code = patch.code;
   if (patch.name !== undefined) data.name = patch.name;
   if (patch.categoryId !== undefined) data.category = { connect: { id: patch.categoryId } };
   if (patch.hasVariants !== undefined) data.hasVariants = patch.hasVariants;
@@ -322,7 +349,16 @@ export async function createVariant(
       price: new Prisma.Decimal(input.price),
       stock: input.stock,
       unit: input.unit,
+      unitDetail: input.unitDetail?.trim() || null,
+      currentCost: new Prisma.Decimal(input.purchaseCost ?? 0),
       sortOrder: sizeToSortOrder(input.size),
+      restocks: input.stock > 0 ? {
+        create: {
+          quantity: input.stock,
+          costPerUnit: new Prisma.Decimal(input.purchaseCost ?? 0),
+          note: input.purchaseNote?.trim() || "Opening stock",
+        },
+      } : undefined,
     },
   });
   const n = await prisma.productVariant.count({ where: { productId } });
@@ -347,6 +383,7 @@ export async function updateVariant(
   if (input.price !== undefined) data.price = new Prisma.Decimal(input.price);
   if (input.stock !== undefined) data.stock = input.stock;
   if (input.unit !== undefined) data.unit = input.unit;
+  if (input.unitDetail !== undefined) data.unitDetail = input.unitDetail.trim() || null;
 
   if (Object.keys(data).length === 0) {
     throw new AppError("No fields to update", 400);
@@ -355,6 +392,37 @@ export async function updateVariant(
   return prisma.productVariant.update({
     where: { id: variantId },
     data,
+  });
+}
+
+export async function addVariantRestock(productId: string, variantId: string, input: { quantity: number; costPerUnit: number; purchasedAt?: Date; note?: string }) {
+  const existing = await prisma.productVariant.findFirst({ where: { id: variantId, productId }, select: { id: true } });
+  if (!existing) throw new NotFoundError("Variant not found");
+  return prisma.$transaction(async (tx) => {
+    const variant = await tx.productVariant.update({
+      where: { id: variantId },
+      data: { stock: { increment: input.quantity }, currentCost: new Prisma.Decimal(input.costPerUnit) },
+    });
+    const restock = await tx.variantRestock.create({
+      data: { variantId, quantity: input.quantity, costPerUnit: new Prisma.Decimal(input.costPerUnit), purchasedAt: input.purchasedAt, note: input.note?.trim() || null },
+    });
+    return { variant, restock };
+  });
+}
+
+export async function adjustVariantStock(productId: string, variantId: string, input: { type: "INCREASE" | "DECREASE"; quantity: number; reason: "MISSING" | "FOUND" | "MISPLACED" | "COUNTING_ERROR" | "OTHER"; note?: string }) {
+  const existing = await prisma.productVariant.findFirst({ where: { id: variantId, productId }, select: { id: true } });
+  if (!existing) throw new NotFoundError("Variant not found");
+  return prisma.$transaction(async (tx) => {
+    if (input.type === "DECREASE") {
+      const updated = await tx.productVariant.updateMany({ where: { id: variantId, stock: { gte: input.quantity } }, data: { stock: { decrement: input.quantity } } });
+      if (updated.count !== 1) throw new AppError("Adjustment would make stock negative", 409, "INSUFFICIENT_STOCK");
+    } else {
+      await tx.productVariant.update({ where: { id: variantId }, data: { stock: { increment: input.quantity } } });
+    }
+    const adjustment = await tx.variantStockAdjustment.create({ data: { variantId, ...input, note: input.note?.trim() || null } });
+    const variant = await tx.productVariant.findUniqueOrThrow({ where: { id: variantId } });
+    return { variant, adjustment };
   });
 }
 

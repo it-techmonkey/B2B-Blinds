@@ -199,6 +199,7 @@ export async function getOrderById(orderId: string, requesterId: string, isAdmin
         },
       },
       user: { select: { id: true, name: true, email: true } },
+      creditNote: true,
     },
   });
   if (!order) throw new NotFoundError("Order not found");
@@ -217,6 +218,7 @@ export async function listMyOrders(userId: string, page: number, limit: number) 
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
+      include: { creditNote: true },
     }),
     prisma.order.count({ where }),
   ]);
@@ -236,6 +238,7 @@ export async function listAllOrders(page: number, limit: number) {
       include: {
         items: true,
         user: { select: { id: true, name: true, email: true } },
+        creditNote: true,
       },
     }),
     prisma.order.count(),
@@ -247,27 +250,54 @@ export async function listAllOrders(page: number, limit: number) {
 }
 
 export async function updateOrderStatus(orderId: string, status: "CREATED" | "SHIPPED" | "DELIVERED") {
-  const existing = await prisma.order.findUnique({ where: { id: orderId } });
+  const existing = await prisma.order.findUnique({ where: { id: orderId }, include: { creditNote: true } });
   if (!existing) throw new NotFoundError("Order not found");
+  if (existing.creditNote) throw new AppError("A credited order cannot have its status changed", 409, "ORDER_CREDITED");
   return prisma.order.update({
     where: { id: orderId },
     data: { status },
     include: {
       items: true,
       user: { select: { id: true, name: true, email: true } },
+      creditNote: true,
     },
   });
 }
 
 export async function updateOrderPaymentStatus(orderId: string, paymentStatus: "UNPAID" | "PAID") {
-  const existing = await prisma.order.findUnique({ where: { id: orderId } });
+  const existing = await prisma.order.findUnique({ where: { id: orderId }, include: { creditNote: true } });
   if (!existing) throw new NotFoundError("Order not found");
+  if (existing.creditNote) throw new AppError("A credited order cannot have its payment status changed", 409, "ORDER_CREDITED");
   return prisma.order.update({
     where: { id: orderId },
     data: { paymentStatus },
     include: {
       items: true,
       user: { select: { id: true, name: true, email: true } },
+      creditNote: true,
     },
+  });
+}
+
+export async function issueOrderCreditNote(orderId: string, reason?: string) {
+  const existing = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { items: { select: { variantId: true, quantity: true } }, creditNote: true },
+  });
+  if (!existing) throw new NotFoundError("Order not found");
+  if (existing.creditNote) throw new AppError("A credit note has already been issued for this order", 409, "CREDIT_NOTE_EXISTS");
+
+  return prisma.$transaction(async (tx) => {
+    for (const item of existing.items) {
+      await tx.productVariant.update({ where: { id: item.variantId }, data: { stock: { increment: item.quantity } } });
+    }
+    return tx.orderCreditNote.create({
+      data: {
+        orderId,
+        creditNoteNumber: `CN-${existing.orderNumber}`,
+        amount: existing.totalAmount,
+        reason: reason?.trim() || null,
+      },
+    });
   });
 }

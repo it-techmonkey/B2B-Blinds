@@ -29,8 +29,9 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const page = Math.max(1, Number(sp.page) || 1);
   const { data, pagination } = await listMyOrders(session.sub, page, 20);
 
-  const totalValue = data.reduce((sum, o) => sum + Number(o.totalAmount), 0);
-  const openCount = data.filter((o) => o.status !== "DELIVERED").length;
+  const liveOrders = data.filter((o) => !o.creditNote);
+  const totalValue = liveOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+  const openCount = liveOrders.filter((o) => o.status !== "DELIVERED").length;
 
   return (
     <DashboardShell role="CUSTOMER">
@@ -110,7 +111,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                             <td className="px-4 py-3">
                               <PaymentStatusBadge status={s.paymentStatus} />
                             </td>
-                            <td className="px-4 py-3 text-right font-semibold tabular-nums">${s.totalAmount}</td>
+                            <td className="px-4 py-3 text-right font-semibold tabular-nums">{s.isCredited ? <span className="text-destructive">Credited</span> : `$${s.totalAmount}`}</td>
                             <td className="px-4 py-3 text-right">
                               <Link href={`/orders/${s.id}`} className="font-semibold text-primary hover:underline">
                                 View

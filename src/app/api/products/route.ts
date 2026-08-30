@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       return jsonError("Provide variants array, or price+stock for simple product", 400);
     }
     const product = await createProduct({
+      code: data.code,
       name: data.name,
       categoryId: data.categoryId,
       hasVariants: data.hasVariants,

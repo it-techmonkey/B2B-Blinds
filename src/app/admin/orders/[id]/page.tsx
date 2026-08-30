@@ -7,6 +7,7 @@ import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 import { PaymentStatusBadge } from "@/components/PaymentStatusBadge";
 import { PaymentStatusSelect } from "@/components/PaymentStatusSelect";
 import { PageHeader } from "@/components/PageHeader";
+import { IssueOrderCreditNoteButton } from "@/components/IssueOrderCreditNoteButton";
 import { getSession } from "@/lib/auth/get-session";
 import { getOrderById } from "@/server/services/order.service";
 import { serializeOrder } from "@/server/serialize";
@@ -73,6 +74,11 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           <InvoicePdfLink orderId={s.id} variant="button" className="btn-ink mt-3 h-10 w-full">
             Invoice PDF
           </InvoicePdfLink>
+          {s.creditNote ? (
+            <p className="mt-3 text-xs font-semibold text-destructive">Credited: {s.creditNote.number}</p>
+          ) : (
+            <div className="mt-3"><IssueOrderCreditNoteButton orderId={s.id} /></div>
+          )}
         </div>
       </section>
 

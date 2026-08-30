@@ -30,6 +30,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
     const body = await request.json();
     const data = productUpdateSchema.parse(body);
     const product = await updateProduct(id, {
+      code: data.code,
       name: data.name,
       categoryId: data.categoryId,
       hasVariants: data.hasVariants,
