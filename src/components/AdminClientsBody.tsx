@@ -576,23 +576,34 @@ function ClientsTable({
   rows: Row[];
   onAction: (action: "approve" | "reject" | "pricing", row: Row) => void;
 }) {
+  const [sort, setSort] = useState<"name" | "email" | "orders" | "value" | "joined">("name");
+  const [direction, setDirection] = useState<"asc" | "desc">("asc");
+  const sortedRows = useMemo(() => [...rows].sort((a, b) => {
+    const left = sort === "name" ? a.name : sort === "email" ? a.email : sort === "orders" ? a.orderCount : sort === "value" ? Number(a.totalSpent) : new Date(a.createdAt).getTime();
+    const right = sort === "name" ? b.name : sort === "email" ? b.email : sort === "orders" ? b.orderCount : sort === "value" ? Number(b.totalSpent) : new Date(b.createdAt).getTime();
+    const comparison = typeof left === "string" ? left.localeCompare(String(right), undefined, { numeric: true, sensitivity: "base" }) : left - Number(right);
+    return direction === "asc" ? comparison : -comparison;
+  }), [rows, sort, direction]);
+  function sortableHeader(key: "name" | "email" | "orders" | "value" | "joined", label: string) {
+    return <button type="button" onClick={() => { if (sort === key) setDirection((value) => value === "asc" ? "desc" : "asc"); else { setSort(key); setDirection("asc"); } }} className="inline-flex items-center gap-1 font-medium hover:text-foreground">{label}<span aria-hidden="true">{sort === key ? (direction === "asc" ? "↑" : "↓") : "↕"}</span></button>;
+  }
   return (
     <div className="table-shell overflow-x-auto">
       <table className="w-full min-w-240 text-sm">
         <thead>
           <tr className="table-head">
-            <th className="px-3 py-3 font-medium">Client</th>
-            <th className="px-3 py-3 font-medium">Email</th>
+            <th className="px-3 py-3">{sortableHeader("name", "Client")}</th>
+            <th className="px-3 py-3">{sortableHeader("email", "Email")}</th>
             <th className="px-3 py-3 font-medium">Status</th>
             <th className="px-3 py-3 font-medium">Discount</th>
-            <th className="px-3 py-3 text-right font-medium">Orders</th>
-            <th className="px-3 py-3 text-right font-medium">Lifetime value</th>
-            <th className="px-3 py-3 font-medium">Joined</th>
+            <th className="px-3 py-3 text-right">{sortableHeader("orders", "Orders")}</th>
+            <th className="px-3 py-3 text-right">{sortableHeader("value", "Lifetime value")}</th>
+            <th className="px-3 py-3">{sortableHeader("joined", "Joined")}</th>
             <th className="px-3 py-3 text-right font-medium">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
+          {sortedRows.map((r) => (
             <tr key={r.id} className="table-row">
               <td className="px-3 py-3 font-semibold text-foreground">{r.name}</td>
               <td className="px-3 py-3 text-muted-foreground">{r.email}</td>
