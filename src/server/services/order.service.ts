@@ -18,7 +18,7 @@ async function nextOrderNumber(tx: Prisma.TransactionClient, prefix: string): Pr
   return `${prefix}${String(count + 1).padStart(4, "0")}`;
 }
 
-export type OrderLineInput = { productId: string; variantId?: string; quantity: number };
+export type OrderLineInput = { productId: string; variantId?: string; quantity: number; price?: number };
 export type OrderCustomerInput = {
   name: string;
   businessName: string;
@@ -29,7 +29,7 @@ export type OrderCustomerInput = {
   customerReference?: string;
 };
 
-export async function createOrder(items: OrderLineInput[], customer: OrderCustomerInput, userId?: string) {
+export async function createOrder(items: OrderLineInput[], customer: OrderCustomerInput, userId?: string, allowManualPrices = false) {
   const productIds = [...new Set(items.map((i) => i.productId))];
   const products = await prisma.product.findMany({
     where: { id: { in: productIds }, isActive: true },
@@ -101,7 +101,9 @@ export async function createOrder(items: OrderLineInput[], customer: OrderCustom
       throw new AppError(`Insufficient stock for "${product.name}" (${variant.size})`, 409, "INSUFFICIENT_STOCK");
     }
 
-    const effectivePrice = resolvePrice(variant.price, variant.id);
+    const effectivePrice = allowManualPrices && line.price !== undefined
+      ? new Prisma.Decimal(line.price)
+      : resolvePrice(variant.price, variant.id);
     const lineTotal = effectivePrice.mul(line.quantity);
     totalAmount = totalAmount.add(lineTotal);
     lineCreates.push({

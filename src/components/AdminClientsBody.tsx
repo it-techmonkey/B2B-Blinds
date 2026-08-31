@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiJson } from "@/lib/api-client";
@@ -20,6 +20,7 @@ type Row = {
 
 type ProductItem = {
   id: string;
+  code: string | null;
   name: string;
   category: { name: string };
   variants: { id: string; size: string; price: string; unit: string }[];
@@ -90,6 +91,25 @@ function PricingFields({
 }) {
   const discountNum = parseFloat(discount);
   const validDiscount = !isNaN(discountNum) && discountNum > 0;
+  const [sort, setSort] = useState<"code" | "name" | "price">("name");
+  const [direction, setDirection] = useState<"asc" | "desc">("asc");
+
+  const sortedProducts = useMemo(() => [...products].sort((a, b) => {
+    const lowestPrice = (product: ProductItem) => Math.min(...product.variants.map((variant) => Number(variant.price)), Infinity);
+    const left = sort === "code" ? (a.code ?? "") : sort === "name" ? a.name : lowestPrice(a);
+    const right = sort === "code" ? (b.code ?? "") : sort === "name" ? b.name : lowestPrice(b);
+    const comparison = typeof left === "string" ? left.localeCompare(String(right), undefined, { numeric: true, sensitivity: "base" }) : left - Number(right);
+    return direction === "asc" ? comparison : -comparison;
+  }), [products, sort, direction]);
+
+  function toggleSort(key: "code" | "name" | "price") {
+    if (sort === key) setDirection((value) => value === "asc" ? "desc" : "asc");
+    else { setSort(key); setDirection("asc"); }
+  }
+
+  function sortButton(key: "code" | "name" | "price", label: string) {
+    return <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">{label}<span aria-hidden="true">{sort === key ? (direction === "asc" ? "↑" : "↓") : "↕"}</span></button>;
+  }
 
   return (
     <div className="space-y-5">
@@ -127,7 +147,7 @@ function PricingFields({
         <p className="field-label">
           Per-product settings{" "}
           <span className="font-normal text-muted-foreground">
-            — override price per variant or disable a product entirely
+            — optional: override only the variants this client buys, or disable a product entirely
           </span>
         </p>
 
@@ -140,8 +160,14 @@ function PricingFields({
         ) : products.length === 0 ? (
           <p className="text-sm text-muted-foreground">No products found.</p>
         ) : (
-          <div className="max-h-85 space-y-2 overflow-y-auto pr-1">
-            {products.map((p) => {
+          <>
+            <div className="flex items-center gap-4 border-b border-border px-1 pb-2">
+              {sortButton("code", "Product code")}
+              {sortButton("name", "Product name")}
+              {sortButton("price", "Price")}
+            </div>
+            <div className="max-h-85 space-y-2 overflow-y-auto pr-1">
+            {sortedProducts.map((p) => {
               const isBlocked = blockedProductIds.has(p.id);
               return (
                 <div
@@ -155,7 +181,7 @@ function PricingFields({
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-foreground">{p.name}</p>
-                      <p className="text-xs text-muted-foreground">{p.category.name}</p>
+                      <p className="text-xs text-muted-foreground">{p.code ?? "No code"} · {p.category.name}</p>
                     </div>
                     <label className="flex cursor-pointer items-center gap-2 text-xs">
                       <span className={isBlocked ? "font-medium text-destructive" : "text-muted-foreground"}>
@@ -217,7 +243,8 @@ function PricingFields({
                 </div>
               );
             })}
-          </div>
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -307,7 +334,7 @@ function ApproveModal({
     <Modal title={`Approve — ${client.name}`} onClose={onClose} wide>
       <p className="text-sm text-muted-foreground">
         Approving grants <span className="font-medium text-foreground">{client.email}</span> access to sign in.
-        Optionally configure pricing before approving.
+        Pricing is optional: you can approve this client without setting any prices, then configure only the products they buy later.
       </p>
 
       <PricingFields

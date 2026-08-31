@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiJson } from "@/lib/api-client";
-import { sortByCategoryOrder } from "@/lib/category-order";
 
 type Variant = { id: string; size: string; price: string; stock: number; unit: string };
 
 type ProductRow = {
   id: string;
+  code: string | null;
   name: string;
   category: { name: string };
   hasVariants: boolean;
@@ -53,9 +53,12 @@ export function AdminNewOrderClient() {
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [userId, setUserId] = useState("");
   const [products, setProducts] = useState<ProductRow[]>([]);
+  const [sort, setSort] = useState<"code" | "name" | "price">("name");
+  const [direction, setDirection] = useState<"asc" | "desc">("asc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [invoicePriceByVariant, setInvoicePriceByVariant] = useState<Record<string, string>>({});
   const [selectedVariantByProduct, setSelectedVariantByProduct] = useState<Record<string, string>>({});
   const [draftQtyByVariant, setDraftQtyByVariant] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -140,9 +143,16 @@ export function AdminNewOrderClient() {
       setError("Select a client.");
       return;
     }
-    const items = buildLinesFromState(products, quantities);
+    const items = buildLinesFromState(products, quantities).map((item) => {
+      const rawPrice = invoicePriceByVariant[item.variantId]?.trim() ?? "";
+      return { ...item, price: rawPrice === "" ? undefined : Number(rawPrice) };
+    });
     if (items.length === 0) {
       setError("Add at least one line.");
+      return;
+    }
+    if (items.some((item) => item.price !== undefined && (!Number.isFinite(item.price) || item.price < 0))) {
+      setError("Enter a valid invoice price for each edited line.");
       return;
     }
     if (!customer.name.trim() || !customer.businessName.trim() || !customer.email.trim() || !customer.phone.trim() || !customer.city.trim()) {
@@ -177,15 +187,24 @@ export function AdminNewOrderClient() {
   }
 
   const productsByCategory = useMemo(() => {
-    const grouped = new Map<string, ProductRow[]>();
-    for (const product of products) {
-      const key = product.category.name;
-      const bucket = grouped.get(key);
-      if (bucket) bucket.push(product);
-      else grouped.set(key, [product]);
-    }
-    return sortByCategoryOrder(Array.from(grouped.entries()));
-  }, [products]);
+    const lowestPrice = (product: ProductRow) => Math.min(...product.variants.map((variant) => Number(variant.price)), Infinity);
+    const sorted = [...products].sort((a, b) => {
+      const left = sort === "code" ? (a.code ?? "") : sort === "name" ? a.name : lowestPrice(a);
+      const right = sort === "code" ? (b.code ?? "") : sort === "name" ? b.name : lowestPrice(b);
+      const comparison = typeof left === "string" ? left.localeCompare(String(right), undefined, { numeric: true, sensitivity: "base" }) : left - Number(right);
+      return direction === "asc" ? comparison : -comparison;
+    });
+    return [["Products", sorted]] as [string, ProductRow[]][];
+  }, [products, sort, direction]);
+
+  function toggleSort(key: "code" | "name" | "price") {
+    if (sort === key) setDirection((value) => value === "asc" ? "desc" : "asc");
+    else { setSort(key); setDirection("asc"); }
+  }
+
+  function sortButton(key: "code" | "name" | "price", label: string) {
+    return <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">{label}<span aria-hidden="true">{sort === key ? (direction === "asc" ? "↑" : "↓") : "↕"}</span></button>;
+  }
 
   if (loading) {
     return (
@@ -302,6 +321,12 @@ export function AdminNewOrderClient() {
       </section>
 
       <div className="space-y-6">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border pb-3">
+          <span className="text-xs text-muted-foreground">Sort products:</span>
+          {sortButton("code", "Product code")}
+          {sortButton("name", "Product name")}
+          {sortButton("price", "Price")}
+        </div>
         {productsByCategory.map(([categoryName, categoryProducts]) => (
           <section key={categoryName} className="space-y-3">
             <div className="flex items-center justify-between">
@@ -323,7 +348,7 @@ export function AdminNewOrderClient() {
                       <div className="space-y-1">
                         <p className="text-base font-semibold leading-5 tracking-[-0.01em] text-foreground">{p.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {p.variants.length} variant{p.variants.length === 1 ? "" : "s"} · stock size-wise
+                          {p.code ?? "No code"} · {p.category.name} · {p.variants.length} variant{p.variants.length === 1 ? "" : "s"}
                         </p>
                       </div>
                       <span
@@ -363,6 +388,29 @@ export function AdminNewOrderClient() {
                         <span>
                           {selectedVariant ? `$${selectedVariant.price} / ${selectedVariant.unit.toLowerCase()}` : "—"}
                         </span>
+                      </div>
+                      <div className="mt-3">
+                        <label className="field-label text-xs" htmlFor={`admin-price-${p.id}`}>
+                          Invoice price <span className="font-normal text-muted-foreground">(optional)</span>
+                        </label>
+                        <div className="relative mt-1.5">
+                          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                          <input
+                            id={`admin-price-${p.id}`}
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            className="input-field-sm h-9 w-full pl-5 text-right"
+                            placeholder={selectedVariant ? selectedVariant.price : "0.00"}
+                            value={selectedVariant ? invoicePriceByVariant[selectedVariant.id] ?? "" : ""}
+                            onChange={(event) => {
+                              if (!selectedVariant) return;
+                              setInvoicePriceByVariant((previous) => ({ ...previous, [selectedVariant.id]: event.target.value }));
+                            }}
+                            disabled={!selectedVariant}
+                          />
+                        </div>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Leave blank to use this client&apos;s saved price, or the list price.</p>
                       </div>
                     </div>
 

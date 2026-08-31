@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     await requireAdmin(request);
     const body = await request.json();
     const { userId, items, customer } = adminCreateOrderSchema.parse(body);
-    const order = await createOrder(items, customer, userId);
+    const order = await createOrder(items, customer, userId, true);
     const invoiceAccessToken = await signInvoiceAccessToken(order.id);
     return jsonOk({ order: serializeOrder(order), invoiceAccessToken }, 201);
   } catch (e) {

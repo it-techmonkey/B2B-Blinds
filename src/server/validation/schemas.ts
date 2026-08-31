@@ -104,6 +104,7 @@ export const orderItemInputSchema = z.object({
     },
     z.number().int().positive().max(1_000_000)
   ),
+  price: z.coerce.number().min(0).max(1_000_000_000).optional(),
 });
 
 export const createOrderSchema = z.object({
