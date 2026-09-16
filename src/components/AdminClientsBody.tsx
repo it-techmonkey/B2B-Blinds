@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/PageHeader";
 type Row = {
   id: string;
   name: string;
+  businessName: string | null;
   email: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   approved: boolean;
@@ -593,6 +594,7 @@ function ClientsTable({
         <thead>
           <tr className="table-head">
             <th className="px-3 py-3">{sortableHeader("name", "Client")}</th>
+            <th className="px-3 py-3 font-medium">Business name</th>
             <th className="px-3 py-3">{sortableHeader("email", "Email")}</th>
             <th className="px-3 py-3 font-medium">Status</th>
             <th className="px-3 py-3 font-medium">Discount</th>
@@ -606,6 +608,7 @@ function ClientsTable({
           {sortedRows.map((r) => (
             <tr key={r.id} className="table-row">
               <td className="px-3 py-3 font-semibold text-foreground">{r.name}</td>
+              <td className="px-3 py-3 text-muted-foreground">{r.businessName ?? "—"}</td>
               <td className="px-3 py-3 text-muted-foreground">{r.email}</td>
               <td className="px-3 py-3">
                 <StatusBadge status={r.status} />

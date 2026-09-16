@@ -12,6 +12,7 @@ type Client = {
   postcode: string | null;
   invoiceAddress: string | null;
   deliveryAddress: string | null;
+  allowCreditWithoutPurchase: boolean;
 };
 
 export function AdminClientProfileForm({ clientId, initial }: { clientId: string; initial: Client }) {
@@ -22,6 +23,10 @@ export function AdminClientProfileForm({ clientId, initial }: { clientId: string
 
   function update(key: keyof Client, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateChecked(key: keyof Client, checked: boolean) {
+    setForm((current) => ({ ...current, [key]: checked }));
   }
 
   async function save(event: React.FormEvent) {
@@ -56,6 +61,13 @@ export function AdminClientProfileForm({ clientId, initial }: { clientId: string
         <TextField label="Invoice address" value={form.invoiceAddress ?? ""} onChange={(value) => update("invoiceAddress", value)} multiline />
         <TextField label="Delivery address" value={form.deliveryAddress ?? ""} onChange={(value) => update("deliveryAddress", value)} multiline />
       </div>
+      <label className="mt-5 flex items-start gap-2.5 rounded-xl border border-border bg-muted/45 p-4">
+        <input type="checkbox" className="mt-0.5" checked={form.allowCreditWithoutPurchase} onChange={(event) => updateChecked("allowCreditWithoutPurchase", event.target.checked)} />
+        <span>
+          <span className="block text-sm font-medium text-foreground">Allow credit notes without a prior purchase</span>
+          <span className="block text-sm text-muted-foreground">Turn this on for clients who also supply stock to us (e.g. lend/borrow arrangements), so admins can issue them a product credit note even for products they&apos;ve never bought.</span>
+        </span>
+      </label>
       <div className="mt-5 flex justify-end sm:hidden"><button className="btn-primary h-9 px-4 text-sm" disabled={busy}>{busy ? "Saving…" : "Save client"}</button></div>
     </form>
   );

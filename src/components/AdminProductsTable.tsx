@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { DeleteProductButton } from "@/components/DeleteProductButton";
+import { ToggleProductActiveButton } from "@/components/ToggleProductActiveButton";
 
 type Product = {
   id: string;
@@ -70,6 +71,7 @@ export function AdminProductsTable({ products }: { products: Product[] }) {
               <th className="px-5 py-3 text-right">{sortableLabel("stock", "Stock quantity")}</th>
               <th className="px-5 py-3 text-right">{sortableLabel("cost", "Current cost")}</th>
               <th className="px-5 py-3 text-right font-medium">Selling price</th>
+              <th className="px-5 py-3 text-left font-medium">Status</th>
               <th className="px-5 py-3 text-right font-medium">Actions</th>
             </tr>
           </thead>
@@ -82,10 +84,17 @@ export function AdminProductsTable({ products }: { products: Product[] }) {
                 <td className="px-5 py-3 text-right font-medium tabular-nums">{product.totalStock}</td>
                 <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">{moneyRange(product.currentCostFrom, product.currentCostTo)}</td>
                 <td className="px-5 py-3 text-right tabular-nums">{moneyRange(product.priceFrom, product.priceTo)}</td>
+                <td className="px-5 py-3">
+                  <span className={"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " + (product.isActive ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
+                    {product.isActive ? "Active" : "Deactivated"}
+                  </span>
+                </td>
                 <td className="whitespace-nowrap px-5 py-3 text-right text-xs">
                   <Link href={"/admin/products/" + product.id + "/edit"} className="font-medium text-primary hover:underline">View</Link>
                   <span className="mx-1.5 text-muted-foreground">·</span>
                   <Link href={"/admin/products/" + product.id + "/edit"} className="font-medium text-primary hover:underline">Edit</Link>
+                  <span className="mx-1.5 text-muted-foreground">·</span>
+                  <ToggleProductActiveButton productId={product.id} isActive={product.isActive} />
                   <span className="mx-1.5 text-muted-foreground">·</span>
                   <DeleteProductButton productId={product.id} />
                 </td>

@@ -10,6 +10,7 @@ const updateClientSchema = z.object({
   name: z.string().trim().min(1).max(200), businessName: z.string().trim().max(200).optional().nullable(),
   phone: z.string().trim().max(40).optional().nullable(), city: z.string().trim().max(120).optional().nullable(),
   postcode: z.string().trim().max(20).optional().nullable(), invoiceAddress: z.string().trim().max(8_000).optional().nullable(), deliveryAddress: z.string().trim().max(8_000).optional().nullable(),
+  allowCreditWithoutPurchase: z.coerce.boolean().optional(),
 });
 
 export async function PUT(request: NextRequest, context: Ctx) {

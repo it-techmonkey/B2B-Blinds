@@ -82,6 +82,13 @@ export const creditNoteSchema = z.object({
   reason: z.string().trim().max(1_000).optional(),
 });
 
+export const productCreditNoteSchema = z.object({
+  productId: z.string().min(1),
+  variantId: z.string().min(1),
+  quantity: z.coerce.number().int().positive().max(1_000_000),
+  reason: z.string().trim().max(1_000).optional(),
+});
+
 export const orderItemInputSchema = z.object({
   productId: z.preprocess(
     (v) => (v == null ? "" : String(v).trim()),

@@ -303,3 +303,58 @@ export async function issueOrderCreditNote(orderId: string, reason?: string) {
     });
   });
 }
+
+function productCreditNotePrefix(): string {
+  const now = new Date();
+  const datePart =
+    String(now.getFullYear()) +
+    String(now.getMonth() + 1).padStart(2, "0") +
+    String(now.getDate()).padStart(2, "0");
+  return `PCN-${datePart}-`;
+}
+
+export type ProductCreditNoteInput = { productId: string; variantId: string; quantity: number; reason?: string };
+
+export async function issueProductCreditNote(userId: string, input: ProductCreditNoteInput) {
+  const user = await prisma.user.findFirst({ where: { id: userId, role: "CUSTOMER" } });
+  if (!user) throw new NotFoundError("Client not found");
+
+  const variant = await prisma.productVariant.findFirst({ where: { id: input.variantId, productId: input.productId } });
+  if (!variant) throw new NotFoundError("Product variant not found");
+
+  if (!user.allowCreditWithoutPurchase) {
+    const priorPurchase = await prisma.orderItem.findFirst({ where: { productId: input.productId, order: { userId } } });
+    if (!priorPurchase) {
+      throw new AppError(
+        "This client hasn't purchased this product before. Enable the credit-without-purchase toggle on their profile to override.",
+        409,
+        "NO_PRIOR_PURCHASE"
+      );
+    }
+  }
+
+  const prefix = productCreditNotePrefix();
+  return prisma.$transaction(async (tx) => {
+    await tx.productVariant.update({ where: { id: variant.id }, data: { stock: { increment: input.quantity } } });
+    const count = await tx.productCreditNote.count({ where: { creditNoteNumber: { startsWith: prefix } } });
+    const creditNoteNumber = `${prefix}${String(count + 1).padStart(4, "0")}`;
+    return tx.productCreditNote.create({
+      data: {
+        creditNoteNumber,
+        userId,
+        productId: input.productId,
+        variantId: input.variantId,
+        quantity: input.quantity,
+        reason: input.reason?.trim() || null,
+      },
+    });
+  });
+}
+
+export async function listProductCreditNotes(userId: string) {
+  return prisma.productCreditNote.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    include: { product: { select: { name: true } }, variant: { select: { size: true, unit: true } } },
+  });
+}

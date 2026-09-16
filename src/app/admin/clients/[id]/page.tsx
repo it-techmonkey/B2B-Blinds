@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { UserRole } from "@prisma/client";
 import { AdminClientProfileForm } from "@/components/AdminClientProfileForm";
+import { IssueProductCreditNoteForm } from "@/components/IssueProductCreditNoteForm";
 import { DashboardShell } from "@/components/DashboardShell";
 import { PageHeader } from "@/components/PageHeader";
 import { getSession } from "@/lib/auth/get-session";
@@ -41,8 +42,11 @@ export default async function AdminClientPage({ params }: { params: Promise<{ id
             postcode: client.postcode,
             invoiceAddress: client.invoiceAddress,
             deliveryAddress: client.deliveryAddress,
+            allowCreditWithoutPurchase: client.allowCreditWithoutPurchase,
           }}
         />
+
+        <IssueProductCreditNoteForm clientId={client.id} />
 
         <section className="card-dashboard p-5 sm:p-6">
           <p className="section-kicker">Client pricing</p>
