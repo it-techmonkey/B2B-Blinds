@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth/api";
 import { jsonError, jsonOk } from "@/lib/http";
 import { connectionErrorResponse } from "@/lib/prisma-errors";
 import { AppError } from "@/server/errors";
+import { sendAccountApprovedEmail } from "@/lib/email";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -58,6 +59,14 @@ export async function POST(request: NextRequest, context: Ctx) {
       where: { id },
       select: { id: true, name: true, email: true, status: true, approved: true, pricingDiscount: true },
     });
+
+    if (user) {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? request.nextUrl.origin;
+      sendAccountApprovedEmail(user.email, user.name, `${baseUrl}/login`).catch((err) =>
+        console.error("[approve] Failed to send account approved email:", err)
+      );
+    }
+
     return jsonOk({ user });
   } catch (e) {
     if (e instanceof AppError) {

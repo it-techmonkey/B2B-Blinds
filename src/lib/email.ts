@@ -109,6 +109,34 @@ export async function sendApplicationReceivedEmail(to: string, name: string) {
   console.log("[Resend] Application received email sent:", data?.id);
 }
 
+export async function sendAccountApprovedEmail(to: string, name: string, loginUrl: string) {
+  const html = renderEmailLayout({
+    preheader: `Your ${SITE_BRAND} trade account has been approved.`,
+    heading: `Hi ${name}, your account is approved`,
+    bodyHtml: `
+      <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#4b5563">
+        Good news — your trade account with ${SITE_BRAND} has been approved. You can now sign in and start ordering.
+      </p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#9aa0ab">
+        If you have any questions about your account or pricing, just get in touch.
+      </p>
+    `,
+    cta: { label: "Sign in", url: loginUrl },
+  });
+
+  const { data, error } = await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Your account has been approved — ${SITE_BRAND}`,
+    html,
+  });
+  if (error) {
+    console.error("[Resend] Failed to send account approved email:", JSON.stringify(error));
+    throw new Error(error.message ?? "Failed to send email");
+  }
+  console.log("[Resend] Account approved email sent:", data?.id);
+}
+
 export type PricingUpdateSummary = {
   discount: string | null;
   overrides: { productName: string; size: string; price: string }[];
