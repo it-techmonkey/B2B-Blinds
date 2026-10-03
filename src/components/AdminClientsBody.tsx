@@ -380,6 +380,7 @@ function PricingModal({
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [overrides, setOverrides] = useState<VariantOverride[]>([]);
   const [blockedProductIds, setBlockedProductIds] = useState<Set<string>>(new Set());
+  const [notifyClient, setNotifyClient] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -440,6 +441,7 @@ function PricingModal({
           discount: discountVal,
           overrides: validOverrides,
           blockedProductIds: Array.from(blockedProductIds),
+          notifyClient,
         }),
       });
       onDone();
@@ -470,6 +472,21 @@ function PricingModal({
       />
 
       {error ? <p className="alert-error text-sm">{error}</p> : null}
+
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={notifyClient}
+          onChange={(e) => setNotifyClient(e.target.checked)}
+        />
+        <span>
+          Email {client.email} about price changes
+          <span className="block text-xs text-muted-foreground">
+            Untick to save silently, for example when fixing a typo. Nothing is sent if no prices changed.
+          </span>
+        </span>
+      </label>
 
       <div className="flex justify-end gap-2 pt-1">
         <button type="button" onClick={onClose} className="btn-secondary h-9 px-4 text-sm">

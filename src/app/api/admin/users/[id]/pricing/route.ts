@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth/api";
 import { jsonError, jsonOk } from "@/lib/http";
 import { connectionErrorResponse } from "@/lib/prisma-errors";
 import { AppError } from "@/server/errors";
-import { sendPricingUpdatedEmail } from "@/lib/email";
+import { sendPricingUpdatedEmail, type PriceChange } from "@/lib/email";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -60,10 +60,17 @@ export async function PUT(request: NextRequest, context: Ctx) {
       discount?: number | null;
       overrides?: { variantId: string; price: number }[];
       blockedProductIds?: string[];
+      /** Email the client about price changes (default true) */
+      notifyClient?: boolean;
     } = await request.json();
 
-    const exists = await prisma.user.findFirst({ where: { id, role: UserRole.CUSTOMER } });
+    const exists = await prisma.user.findFirst({
+      where: { id, role: UserRole.CUSTOMER },
+      include: { priceOverrides: { select: { variantId: true, price: true } } },
+    });
     if (!exists) return jsonError("Customer not found", 404);
+    const oldDiscount = exists.pricingDiscount;
+    const oldOverrides = new Map(exists.priceOverrides.map((o) => [o.variantId, o.price]));
 
     await prisma.user.update({
       where: { id },
@@ -97,30 +104,45 @@ export async function PUT(request: NextRequest, context: Ctx) {
       }
     }
 
-    const [overridesDetail, blockedDetail] = await Promise.all([
-      body.overrides !== undefined && body.overrides.length > 0
-        ? prisma.clientPriceOverride.findMany({
-            where: { userId: id },
-            select: {
-              price: true,
-              variant: { select: { size: true, product: { select: { name: true } } } },
-            },
-          })
-        : Promise.resolve([]),
-      body.blockedProductIds !== undefined && body.blockedProductIds.length > 0
-        ? prisma.product.findMany({ where: { id: { in: body.blockedProductIds } }, select: { name: true } })
-        : Promise.resolve([]),
-    ]);
+    if (body.notifyClient !== false) {
+      const changes: PriceChange[] = [];
+      const newDiscount = body.discount != null && body.discount > 0 ? new Prisma.Decimal(body.discount) : null;
+      if (!(oldDiscount ?? new Prisma.Decimal(0)).eq(newDiscount ?? new Prisma.Decimal(0))) {
+        changes.push({
+          label: "Account-wide discount",
+          from: oldDiscount && oldDiscount.gt(0) ? `${oldDiscount.toFixed(2)}% off` : null,
+          to: newDiscount ? `${newDiscount.toFixed(2)}% off` : null,
+        });
+      }
 
-    sendPricingUpdatedEmail(exists.email, exists.name, {
-      discount: body.discount != null && body.discount > 0 ? body.discount.toFixed(2) : null,
-      overrides: overridesDetail.map((o) => ({
-        productName: o.variant.product.name,
-        size: o.variant.size,
-        price: o.price.toFixed(2),
-      })),
-      blockedProductNames: blockedDetail.map((p) => p.name),
-    }).catch((err) => console.error("[pricing] Failed to send pricing update email:", err));
+      if (body.overrides !== undefined) {
+        const newOverrides = new Map(body.overrides.map((o) => [o.variantId, new Prisma.Decimal(o.price)]));
+        const changedIds = [...new Set([...oldOverrides.keys(), ...newOverrides.keys()])].filter((vid) => {
+          const o = oldOverrides.get(vid);
+          const n = newOverrides.get(vid);
+          return !(o && n && o.eq(n)) && !(!o && !n);
+        });
+        if (changedIds.length > 0) {
+          const variants = await prisma.productVariant.findMany({
+            where: { id: { in: changedIds } },
+            select: { id: true, size: true, product: { select: { name: true } } },
+          });
+          for (const v of variants) {
+            changes.push({
+              label: `${v.product.name} (${v.size})`,
+              from: oldOverrides.has(v.id) ? `$${oldOverrides.get(v.id)!.toFixed(2)}` : null,
+              to: newOverrides.has(v.id) ? `$${newOverrides.get(v.id)!.toFixed(2)}` : null,
+            });
+          }
+        }
+      }
+
+      if (changes.length > 0) {
+        sendPricingUpdatedEmail(exists.email, exists.name, changes).catch((err) =>
+          console.error("[pricing] Failed to send pricing update email:", err)
+        );
+      }
+    }
 
     return jsonOk({ ok: true });
   } catch (e) {

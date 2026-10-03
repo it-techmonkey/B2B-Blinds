@@ -3,7 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { apiJson } from "@/lib/api-client";
-import { clearCartPayload, readCartPayload, type CartLineMeta } from "@/lib/cart-storage";
+import {
+  clearCartPayload,
+  clearResumeInfo,
+  readCartPayload,
+  readResumeInfo,
+  type CartLineMeta,
+} from "@/lib/cart-storage";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { InvoicePdfLink } from "@/components/InvoicePdfLink";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -31,6 +38,10 @@ export function CheckoutClient({ isCustomer, initialCustomer }: { isCustomer: bo
   const [placedRefNumber, setPlacedRefNumber] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmStep, setConfirmStep] = useState(false);
+  const [showPlaceModal, setShowPlaceModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [resumedId, setResumedId] = useState<string | null>(null);
   const [invoiceAccessToken, setInvoiceAccessToken] = useState<string | null>(null);
   const [customer, setCustomer] = useState({
     name: initialCustomer?.name ?? "",
@@ -46,6 +57,21 @@ export function CheckoutClient({ isCustomer, initialCustomer }: { isCustomer: bo
     const p = readCartPayload();
     const items = (p?.items ?? []).filter((i) => i.quantity > 0);
     setLines(items);
+    const resume = readResumeInfo();
+    if (resume) {
+      setResumedId(resume.savedOrderId);
+      setNotice(resume.notice ?? null);
+      const c = resume.customer;
+      setCustomer((prev) => ({
+        name: c.name || prev.name,
+        businessName: c.businessName || prev.businessName,
+        email: c.email || prev.email,
+        phone: c.phone || prev.phone,
+        city: c.city || prev.city,
+        notes: c.notes ?? prev.notes,
+        customerReference: c.customerReference ?? prev.customerReference,
+      }));
+    }
   }, []);
 
   const total = useMemo(() => {
@@ -76,6 +102,35 @@ export function CheckoutClient({ isCustomer, initialCustomer }: { isCustomer: bo
     }
     setError(null);
     setConfirmStep(true);
+  }
+
+  async function saveForLater() {
+    if (lines.length === 0) return;
+    setError(null);
+    setSaving(true);
+    try {
+      await apiJson("/api/saved-orders", {
+        method: "POST",
+        body: JSON.stringify({
+          items: lines.map((l) => ({
+            productId: String(l.productId).trim(),
+            variantId: l.variantId ? String(l.variantId).trim() : undefined,
+            quantity: Math.floor(Number(l.quantity)),
+          })),
+          customer,
+        }),
+      });
+      // Saving again from a resumed order replaces the older copy
+      if (resumedId) {
+        await fetch(`/api/saved-orders/${resumedId}`, { method: "DELETE", credentials: "include" }).catch(() => {});
+      }
+      clearCartPayload();
+      clearResumeInfo();
+      router.push("/orders/saved?saved=1");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save order");
+      setSaving(false);
+    }
   }
 
   async function placeOrder() {
@@ -112,12 +167,19 @@ export function CheckoutClient({ isCustomer, initialCustomer }: { isCustomer: bo
         }),
       });
       clearCartPayload();
+      clearResumeInfo();
+      if (resumedId) {
+        // The saved copy has become a real order
+        await fetch(`/api/saved-orders/${resumedId}`, { method: "DELETE", credentials: "include" }).catch(() => {});
+      }
+      setShowPlaceModal(false);
       setPlacedOrderId(res.order.id);
       setPlacedRefNumber(res.order.orderNumber ?? null);
       setInvoiceAccessToken(res.invoiceAccessToken ?? null);
       setLines([]);
       setConfirmStep(false);
     } catch (e) {
+      setShowPlaceModal(false);
       setError(e instanceof Error ? e.message : "Order failed");
     } finally {
       setSubmitting(false);
@@ -167,6 +229,7 @@ export function CheckoutClient({ isCustomer, initialCustomer }: { isCustomer: bo
   return (
     <div className="space-y-8">
       {error ? <p className="alert-error">{error}</p> : null}
+      {notice ? <p className="rounded-[14px] border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">{notice}</p> : null}
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -369,11 +432,14 @@ export function CheckoutClient({ isCustomer, initialCustomer }: { isCustomer: bo
             </button>
             <button
               type="button"
-              disabled={submitting}
-              onClick={placeOrder}
+              disabled={submitting || saving}
+              onClick={() => setShowPlaceModal(true)}
               className="btn-primary w-full min-w-[10rem] sm:w-auto"
             >
               {submitting ? "Placing order…" : "Place order"}
+            </button>
+            <button type="button" disabled={submitting || saving} onClick={saveForLater} className="btn-secondary w-full sm:w-auto">
+              {saving ? "Saving…" : "Save for later"}
             </button>
           </div>
         </section>
@@ -397,8 +463,23 @@ export function CheckoutClient({ isCustomer, initialCustomer }: { isCustomer: bo
             >
               Continue to review
             </button>
+            <button type="button" disabled={submitting || saving} onClick={saveForLater} className="btn-secondary w-full sm:w-auto">
+              {saving ? "Saving…" : "Save for later"}
+            </button>
           </div>
         </div>
+      ) : null}
+
+      {showPlaceModal ? (
+        <ConfirmModal
+          title="Are you sure you want to place this order?"
+          message="Once placed, this order and its invoice cannot be deleted. The only way to reverse it is a credit note. Not ready yet? Use Save for later instead."
+          confirmLabel="Place order"
+          loadingLabel="Placing order…"
+          onConfirm={placeOrder}
+          onCancel={() => setShowPlaceModal(false)}
+          loading={submitting}
+        />
       ) : null}
     </div>
   );

@@ -80,8 +80,41 @@ model User {
   priceOverrides ClientPriceOverride[]
   productBlocks  ClientProductBlock[]
   productCreditNotes ProductCreditNote[]
+  savedOrders SavedOrder[]
+  adminOrderDrafts AdminOrderDraft[]
 
   @@map("users")
+}
+
+/// An admin's in-progress "order for client", shared between admins. Not an order: no stock is touched.
+model AdminOrderDraft {
+  id        String   @id @default(cuid())
+  clientId  String   @map("client_id")
+  client    User     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// [{ productId, variantId, quantity, price?, refPrice? }]: price is the typed invoice price, refPrice the client's standard price when saved
+  items     Json
+  customer  Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([clientId])
+  @@map("admin_order_drafts")
+}
+
+/// A client's order saved for later. Not an order or invoice: no stock is reserved and no price is stored.
+model SavedOrder {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /** [{ productId, variantId, quantity }] — prices are recalculated when resumed */
+  items     Json
+  /** Checkout form fields (name, businessName, email, phone, city, notes, customerReference) */
+  customer  Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("saved_orders")
 }
 
 model ClientPriceOverride {

@@ -137,37 +137,28 @@ export async function sendAccountApprovedEmail(to: string, name: string, loginUr
   console.log("[Resend] Account approved email sent:", data?.id);
 }
 
-export type PricingUpdateSummary = {
-  discount: string | null;
-  overrides: { productName: string; size: string; price: string }[];
-  blockedProductNames: string[];
+export type PriceChange = {
+  label: string;
+  /** null = standard price / no discount */
+  from: string | null;
+  to: string | null;
 };
 
-export async function sendPricingUpdatedEmail(to: string, name: string, summary: PricingUpdateSummary) {
-  const rows: string[] = [];
-  if (summary.discount) {
-    rows.push(
-      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef0f3;font-size:14px;color:#4b5563">Account-wide discount</td>
-           <td style="padding:10px 0;border-bottom:1px solid #eef0f3;font-size:14px;font-weight:600;color:#171b23;text-align:right">${summary.discount}% off list price</td></tr>`
-    );
-  }
-  for (const o of summary.overrides) {
-    rows.push(
-      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef0f3;font-size:14px;color:#4b5563">${o.productName} (${o.size})</td>
-           <td style="padding:10px 0;border-bottom:1px solid #eef0f3;font-size:14px;font-weight:600;color:#171b23;text-align:right">$${o.price}</td></tr>`
-    );
-  }
-  for (const productName of summary.blockedProductNames) {
-    rows.push(
-      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef0f3;font-size:14px;color:#4b5563">${productName}</td>
-           <td style="padding:10px 0;border-bottom:1px solid #eef0f3;font-size:13px;font-weight:600;color:#a34a3d;text-align:right">No longer available</td></tr>`
-    );
-  }
+function escapeHtml(v: string): string {
+  return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 
-  const tableHtml =
-    rows.length > 0
-      ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px">${rows.join("")}</table>`
-      : `<p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#4b5563">Your account has been reset to standard list pricing.</p>`;
+export async function sendPricingUpdatedEmail(to: string, name: string, changes: PriceChange[]) {
+  const cell = "padding:10px 0;border-bottom:1px solid #eef0f3;font-size:14px;";
+  const rows = changes.map((c) => {
+    const from = c.from ?? "Standard price";
+    const to = c.to ?? "Standard price";
+    return `<tr><td style="${cell}color:#4b5563">${escapeHtml(c.label)}</td>
+           <td style="${cell}color:#9aa0ab;text-align:right;text-decoration:line-through">${escapeHtml(from)}</td>
+           <td style="${cell}font-weight:600;color:#171b23;text-align:right">${escapeHtml(to)}</td></tr>`;
+  });
+
+  const tableHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px">${rows.join("")}</table>`;
 
   const html = renderEmailLayout({
     preheader: `Your ${SITE_BRAND} account pricing has been updated.`,

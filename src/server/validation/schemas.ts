@@ -163,3 +163,26 @@ export function resolveProductCreateVariants(
   }
   return [];
 }
+
+export const saveOrderSchema = z.object({
+  items: z.array(orderItemInputSchema).min(1).max(100),
+  customer: z.object({
+    name: z.string().trim().max(200).optional(),
+    businessName: z.string().trim().max(200).optional(),
+    email: z.string().trim().max(320).optional(),
+    phone: z.string().trim().max(40).optional(),
+    city: z.string().trim().max(120).optional(),
+    notes: z.string().trim().max(500).optional(),
+    customerReference: z.string().trim().max(100).optional(),
+  }),
+});
+
+export const adminOrderDraftSchema = z.object({
+  id: z.string().min(1).optional(),
+  clientId: z.string().min(1),
+  items: z
+    .array(orderItemInputSchema.and(z.object({ variantId: z.string().min(1) })))
+    .min(1)
+    .max(100),
+  customer: saveOrderSchema.shape.customer,
+});

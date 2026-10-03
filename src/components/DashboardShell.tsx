@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { SITE_BRAND } from "@/lib/site";
 
 type DashboardRole = "ADMIN" | "CUSTOMER";
-type NavIcon = "orders" | "clients" | "products" | "reports" | "profile" | "catalog" | "cart" | "checkout";
+type NavIcon = "orders" | "clients" | "products" | "reports" | "profile" | "catalog" | "cart" | "checkout" | "saved";
 type NavItem = {
   href: string;
   label: string;
@@ -41,9 +41,10 @@ const ROLE_META: Record<
     subtitle: "Account",
     links: [
       { href: "/profile", label: "Profile", icon: "profile" },
-      { href: "/orders", label: "Orders", icon: "orders", match: "prefix", excludePrefixes: ["/orders/checkout"] },
+      { href: "/orders", label: "Orders", icon: "orders", match: "prefix", excludePrefixes: ["/orders/checkout", "/orders/saved"] },
       { href: "/catalog", label: "Catalog", icon: "catalog", match: "prefix" },
       { href: "/cart", label: "Cart", icon: "cart" },
+      { href: "/orders/saved", label: "Saved orders", icon: "saved" },
       { href: "/orders/checkout", label: "Checkout", icon: "checkout" },
     ],
   },
@@ -104,6 +105,13 @@ function NavIconGlyph({ icon }: { icon: NavIcon }) {
         <circle cx="10" cy="19" r="1.5" />
         <circle cx="17" cy="19" r="1.5" />
         <path d="M3.5 5h2l1.8 9.2a1.5 1.5 0 0 0 1.5 1.2h8.9a1.5 1.5 0 0 0 1.5-1.2L21 8H7.2" />
+      </svg>
+    );
+  }
+  if (icon === "saved") {
+    return (
+      <svg aria-hidden viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M7 4.5h10v15l-5-3.5-5 3.5z" />
       </svg>
     );
   }
