@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { jsonError, jsonOk } from "@/lib/http";
 import { hashPassword } from "@/lib/auth/password";
+import { COOKIE_NAME } from "@/lib/auth/jwt";
 
 const schema = z.object({
   token: z.string().min(1),
@@ -29,7 +30,10 @@ export async function POST(request: NextRequest) {
       data: { passwordHash, passwordResetToken: null, passwordResetTokenExpiry: null },
     });
 
-    return jsonOk({ message: "Password updated successfully." });
+    // Drop any session cookie in this browser so the user signs in fresh with the new password.
+    const res = jsonOk({ message: "Password updated successfully." });
+    res.cookies.set(COOKIE_NAME, "", { httpOnly: true, path: "/", maxAge: 0 });
+    return res;
   } catch (e) {
     if (e instanceof z.ZodError) return jsonError("Invalid request", 400);
     console.error(e);

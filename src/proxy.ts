@@ -13,11 +13,10 @@ function getSecret(): Uint8Array | null {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(COOKIE_NAME)?.value;
-  const isAuthPage =
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname === "/forgot-password" ||
-    pathname === "/reset-password";
+  // Password recovery pages must always be reachable, even with a stale session
+  // cookie in the browser (e.g. an admin session left open on the same machine).
+  const isRecoveryPage = pathname === "/forgot-password" || pathname === "/reset-password";
+  const isAuthPage = pathname === "/login" || pathname === "/register";
   // Public marketing landing page — shown to everyone, never redirected.
   const isPublicPage = pathname === "/";
 
@@ -32,6 +31,10 @@ export async function proxy(request: NextRequest) {
     }
   }
   const isAuthenticated = Boolean(token && role);
+
+  if (isRecoveryPage) {
+    return NextResponse.next();
+  }
 
   // Keep auth pages public so users can sign in.
   if (isAuthPage) {
