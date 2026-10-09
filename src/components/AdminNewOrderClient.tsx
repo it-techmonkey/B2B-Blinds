@@ -73,7 +73,9 @@ export function AdminNewOrderClient() {
   const [sort, setSort] = useState<"code" | "name" | "price">("name");
   const [direction, setDirection] = useState<"asc" | "desc">("asc");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; details?: string[] } | null>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [invoicePriceByVariant, setInvoicePriceByVariant] = useState<Record<string, string>>({});
   const [selectedVariantByProduct, setSelectedVariantByProduct] = useState<Record<string, string>>({});
@@ -119,7 +121,7 @@ export function AdminNewOrderClient() {
         setSelectedVariantByProduct(initialSelected);
         setDraftQtyByVariant(initialDraft);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : "Failed to load");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -156,6 +158,10 @@ export function AdminNewOrderClient() {
       notes: "",
     });
   }, [userId, customers]);
+
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [error]);
 
   const setQty = useCallback((variantId: string, value: number) => {
     setQuantities((q) => ({ ...q, [variantId]: value }));
@@ -224,11 +230,11 @@ export function AdminNewOrderClient() {
 
   async function saveDraft() {
     if (!userId) {
-      setError("Select a client before saving.");
+      setError({ message: "Select a client before saving." });
       return;
     }
     if (selectedLines.length === 0) {
-      setError("Add at least one line before saving.");
+      setError({ message: "Add at least one line before saving." });
       return;
     }
     setError(null);
@@ -252,7 +258,7 @@ export function AdminNewOrderClient() {
       setNotice("Draft saved. Reopen it any time from Saved drafts.");
       await refreshDrafts();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save draft");
+      setError({ message: e instanceof Error ? e.message : "Could not save draft" });
     } finally {
       setSavingDraft(false);
     }
@@ -309,7 +315,7 @@ export function AdminNewOrderClient() {
       setDeleteDraftId(null);
       await refreshDrafts();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not delete draft");
+      setError({ message: e instanceof Error ? e.message : "Could not delete draft" });
     } finally {
       setDeletingDraft(false);
     }
@@ -319,7 +325,7 @@ export function AdminNewOrderClient() {
 
   async function submitOrder() {
     if (!userId) {
-      setError("Select a client.");
+      setError({ message: "Order could not be created. Select a client." });
       return;
     }
     const items = buildLinesFromState(products, quantities).map((item) => {
@@ -327,15 +333,15 @@ export function AdminNewOrderClient() {
       return { ...item, price: rawPrice === "" ? undefined : Number(rawPrice) };
     });
     if (items.length === 0) {
-      setError("Add at least one line.");
+      setError({ message: "Order could not be created. Add at least one line." });
       return;
     }
     if (items.some((item) => item.price !== undefined && (!Number.isFinite(item.price) || item.price < 0))) {
-      setError("Enter a valid invoice price for each edited line.");
+      setError({ message: "Order could not be created. Enter a valid invoice price for each edited line." });
       return;
     }
     if (!customer.name.trim() || !customer.businessName.trim() || !customer.email.trim() || !customer.phone.trim() || !customer.city.trim()) {
-      setError("Fill all customer fields including city.");
+      setError({ message: "Order could not be created. Fill all customer fields including city." });
       return;
     }
     setError(null);
@@ -363,7 +369,10 @@ export function AdminNewOrderClient() {
       router.push(`/admin/orders/${res.order.id}`);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Order failed");
+      setError({
+        message: `Order could not be created. ${e instanceof Error ? e.message : "Please try again."}`,
+        details: ["No order was created and no stock was deducted."],
+      });
     } finally {
       setSubmitting(false);
     }
@@ -403,7 +412,7 @@ export function AdminNewOrderClient() {
 
   return (
     <div className="content-stack">
-      {error ? <p className="alert-error">{error}</p> : null}
+      {loadError ? <p className="alert-error">{loadError}</p> : null}
       {notice ? (
         <p className="rounded-[14px] border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">{notice}</p>
       ) : null}
@@ -682,10 +691,11 @@ export function AdminNewOrderClient() {
         ) : (
           <>
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[640px] text-sm">
+              <table className="w-full min-w-[760px] text-sm">
                 <thead>
                   <tr className="table-head">
-                    <th className="px-2 py-2 font-medium">Product</th>
+                    <th className="px-2 py-2 font-medium">Code</th>
+                    <th className="px-2 py-2 font-medium">Description</th>
                     <th className="px-2 py-2 font-medium">Size</th>
                     <th className="px-2 py-2 text-right font-medium">Qty</th>
                     <th className="px-2 py-2 text-right font-medium">Invoice price</th>
@@ -699,6 +709,7 @@ export function AdminNewOrderClient() {
                     const unit = typed.trim() !== "" && Number.isFinite(Number(typed)) ? Number(typed) : Number(l.variant.price);
                     return (
                       <tr key={l.variant.id} className="table-row">
+                        <td className="px-2 py-2 text-muted-foreground">{l.product.code ?? "—"}</td>
                         <td className="px-2 py-2 font-medium">{l.product.name}</td>
                         <td className="px-2 py-2 text-muted-foreground">{l.variant.size}</td>
                         <td className="px-2 py-2 text-right">
@@ -711,6 +722,9 @@ export function AdminNewOrderClient() {
                             value={l.quantity}
                             onChange={(e) => editLineQty(l, Number(e.target.value))}
                           />
+                          {l.quantity > l.variant.stock ? (
+                            <span className="mt-1 block text-[11px] font-semibold text-red-700">only {l.variant.stock} in stock</span>
+                          ) : null}
                         </td>
                         <td className="px-2 py-2 text-right">
                           <input
@@ -740,6 +754,15 @@ export function AdminNewOrderClient() {
                     );
                   })}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t border-border">
+                    <td colSpan={5} className="px-2 py-2 text-right text-muted-foreground">
+                      {selectedLines.length} line{selectedLines.length === 1 ? "" : "s"} · Total
+                    </td>
+                    <td className="px-2 py-2 text-right font-semibold tabular-nums text-foreground">${estimatedTotal.toFixed(2)}</td>
+                    <td />
+                  </tr>
+                </tfoot>
               </table>
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground">
@@ -748,6 +771,19 @@ export function AdminNewOrderClient() {
           </>
         )}
       </section>
+
+      {error ? (
+        <div ref={errorRef} role="alert" className="alert-error">
+          <p className="font-semibold">{error.message}</p>
+          {error.details?.length ? (
+            <ul className="mt-1 list-disc pl-5">
+              {error.details.map((d) => (
+                <li key={d}>{d}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
